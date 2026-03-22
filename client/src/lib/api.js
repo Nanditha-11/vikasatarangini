@@ -1,6 +1,10 @@
 const getApiBase = () => {
   if (import.meta.env.VITE_API_BASE) return import.meta.env.VITE_API_BASE;
-  // Fallback: Use the same host but port 5000
+  
+  // In production (deployed), use relative paths to the same host
+  if (import.meta.env.PROD) return ""; 
+
+  // Fallback: Use the same host but port 5000 for local development
   const { hostname } = window.location;
   return `http://${hostname}:5000`;
 };
