@@ -30,7 +30,7 @@ export function AttendanceHeader({ date, setDate, info, presentCount, absentCoun
 
   return (
     <div className="attendance-header">
-      <div className="date-top-selector card" style={{ padding: '15px 30px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0d2866, #0072ff)', color: 'white' }}>
+      <div className="date-top-selector card" style={{ padding: 'min(20px, 4vw) min(30px, 5vw)', marginBottom: '24px', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0d2866, #0072ff)', color: 'white', gap: '20px' }}>
         <div className="row" style={{ gap: '20px' }}>
           <div className="field" style={{ minWidth: '80px', marginBottom: 0 }}>
             <label style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 'bold', fontSize: '0.75em' }}>DATE</label>

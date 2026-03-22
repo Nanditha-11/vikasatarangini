@@ -44,11 +44,11 @@ export function StudentHistoryLog({ student, onClose }) {
         <div className="history-stats">
           <div className="stat-pill">
             <span className="label">Total Medicine</span>
-            <span className="value">{totalMeds} Tablets</span>
+            <span className="value">{totalMeds} {totalMeds === 1 ? 'Tablet' : 'Tablets'}</span>
           </div>
           <div className="stat-pill">
             <span className="label">Attendance</span>
-            <span className="value">{totalPresent} Days</span>
+            <span className="value">{totalPresent} {totalPresent === 1 ? 'Day' : 'Days'}</span>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ export function StudentHistoryLog({ student, onClose }) {
                   <div className="details">
                     {h.present ? (
                       <>
-                        <span className="qty">{h.quantity} Tablets</span>
+                        <span className="qty">{h.quantity} {h.quantity === 1 ? 'Tablet' : 'Tablets'}</span>
                         <span className="method">{h.paymentMethod}</span>
                       </>
                     ) : (

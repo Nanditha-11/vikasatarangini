@@ -1,16 +1,21 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, setToken } from "../lib/api";
 
 export function LoginPage() {
   const nav = useNavigate();
-  const [view, setView] = useState("login"); // login | forgot | reset
+  const [view, setView] = useState("login"); // login | forgot | otp | reset
   const [username] = useState("vikasatarangini");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
+  
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
   async function onLogin(e) {
     e.preventDefault();
@@ -32,16 +37,16 @@ export function LoginPage() {
   }
 
   async function onSendOTP(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError("");
     setBusy(true);
     try {
       await apiFetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "vikasatarangini4@gmail.com" }),
+        body: JSON.stringify({ email }),
       });
-      setView("reset");
+      setView("otp");
     } catch (err) {
       setError(err.message || "Failed to send OTP");
     } finally {
@@ -49,19 +54,51 @@ export function LoginPage() {
     }
   }
 
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) value = value[value.length - 1];
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-focus next
+    if (value && index < 3) {
+      otpRefs[index + 1].current.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs[index - 1].current.focus();
+    }
+  };
+
+  async function onVerifyOTP(e) {
+    e.preventDefault();
+    const code = otp.join("");
+    if (code.length < 4) return setError("Please enter the 4-digit OTP");
+    setView("reset");
+  }
+
   async function onReset(e) {
     e.preventDefault();
+    if (newPassword !== confirmPassword) return setError("Passwords do not match");
+    
     setError("");
     setBusy(true);
     try {
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp, newPassword }),
+        body: JSON.stringify({ email, otp: otp.join(""), newPassword }),
       });
       alert("Password reset success! Please login.");
       setView("login");
       setPassword("");
+      setOtp(["", "", "", ""]);
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setError(err.message || "Reset failed");
     } finally {
@@ -71,11 +108,9 @@ export function LoginPage() {
 
   return (
     <div className="login-page-wrapper">
-      {/* Left Image */}
       <img src="/image1.jpg" alt="Left side" className="login-side-image" />
 
-      {/* Login Card */}
-      <div className="login-card-container">
+      <div className="login-card-container" style={{ width: '100%', maxWidth: '480px', zIndex: 2 }}>
         <div className="card">
           {view === "login" && (
             <>
@@ -86,7 +121,7 @@ export function LoginPage() {
                 Admin Login
               </h3>
 
-              {error ? <div className="error">{error}</div> : null}
+              {error && <div className="error">{error}</div>}
 
               <form onSubmit={onLogin} style={{ marginTop: 12 }}>
                 <div className="field">
@@ -115,7 +150,12 @@ export function LoginPage() {
                 </button>
               </form>
               <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <button className="btn" style={{ borderColor: 'transparent', fontSize: '0.9em' }} onClick={() => setView("forgot")}>
+                <button 
+                  className="btn" 
+                  disabled={busy}
+                  style={{ borderColor: 'transparent', fontSize: '0.9em' }} 
+                  onClick={() => setView("forgot")}
+                >
                   Forgot Password?
                 </button>
               </div>
@@ -124,12 +164,23 @@ export function LoginPage() {
 
           {view === "forgot" && (
             <>
-              <h2 style={{ textAlign: "center" }}>Reset Password</h2>
+              <h2 style={{ textAlign: "center" }}>Forgot Password</h2>
               <p className="muted" style={{ textAlign: "center" }}>
-                A 6-digit OTP will be sent via email.
+                Enter your registered email to receive a 4-digit OTP.
               </p>
-              {error ? <div className="error">{error}</div> : null}
+              {error && <div className="error">{error}</div>}
               <form onSubmit={onSendOTP} style={{ marginTop: 20 }}>
+                <div className="field">
+                  <label>Registered Email</label>
+                  <input
+                    className="input"
+                    type="email"
+                    placeholder="Enter email address"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
                 <button className="btn primary" disabled={busy} style={{ width: "100%" }}>
                   {busy ? "Sending OTP..." : "Send OTP"}
                 </button>
@@ -140,23 +191,47 @@ export function LoginPage() {
             </>
           )}
 
-          {view === "reset" && (
+          {view === "otp" && (
             <>
               <h2 style={{ textAlign: "center" }}>Enter OTP</h2>
               <p className="muted" style={{ textAlign: "center" }}>
-                Enter the code sent to your email.
+                Enter the 4-digit code sent to {email}.
               </p>
-              {error ? <div className="error">{error}</div> : null}
-              <form onSubmit={onReset} style={{ marginTop: 20 }}>
-                <div className="field">
-                  <label>OTP Code</label>
-                  <input
-                    className="input"
-                    placeholder="6-digit OTP"
-                    value={otp}
-                    onChange={e => setOtp(e.target.value)}
-                  />
+              {error && <div className="error">{error}</div>}
+              <form onSubmit={onVerifyOTP} style={{ marginTop: 20 }}>
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '24px' }}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={otpRefs[i]}
+                      className="input"
+                      style={{ width: '50px', height: '60px', textAlign: 'center', fontSize: '1.5em', fontWeight: 'bold' }}
+                      value={digit}
+                      onChange={e => handleOtpChange(i, e.target.value)}
+                      onKeyDown={e => handleOtpKeyDown(i, e)}
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
+                    />
+                  ))}
                 </div>
+                <button className="btn primary" style={{ width: "100%" }}>
+                  Verify OTP
+                </button>
+                <button type="button" className="btn" style={{ width: "100%", marginTop: 10 }} onClick={() => setView("forgot")}>
+                  Resend OTP
+                </button>
+              </form>
+            </>
+          )}
+
+          {view === "reset" && (
+            <>
+              <h2 style={{ textAlign: "center" }}>Create New Password</h2>
+              <p className="muted" style={{ textAlign: "center" }}>
+                Set a strong password for your account.
+              </p>
+              {error && <div className="error">{error}</div>}
+              <form onSubmit={onReset} style={{ marginTop: 20 }}>
                 <div className="field">
                   <label>New Password</label>
                   <input
@@ -165,10 +240,22 @@ export function LoginPage() {
                     placeholder="Enter new password"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>Confirm Password</label>
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
                   />
                 </div>
                 <button className="btn primary" disabled={busy} style={{ width: "100%" }}>
-                  {busy ? "Processing..." : "Reset Password"}
+                  {busy ? "Saving..." : "Change Password"}
                 </button>
               </form>
             </>
@@ -176,7 +263,6 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Right Image */}
       <img src="/image2.jpg" alt="Right side" className="login-side-image" />
     </div>
   );

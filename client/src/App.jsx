@@ -7,6 +7,7 @@ import { AttendanceHistoryPage } from "./pages/AttendanceHistoryPage";
 import { AttendanceHistoryDetailPage } from "./pages/AttendanceHistoryDetailPage";
 import { PaymentPage } from "./pages/PaymentPage";
 import { ModifyStudentsPage } from "./pages/ModifyStudentsPage";
+import { AboutPage } from "./pages/AboutPage";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("vt_token");
@@ -31,6 +32,14 @@ export default function App() {
         element={
           <RequireAuth>
             <AttendanceHistoryDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/about"
+        element={
+          <RequireAuth>
+            <AboutPage />
           </RequireAuth>
         }
       />

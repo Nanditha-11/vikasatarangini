@@ -9,6 +9,7 @@ import { StudentTable } from "../components/StudentTable";
 import { StudentHistoryLog } from "../components/StudentHistoryLog";
 import { WhatsAppEditor } from "../components/WhatsAppEditor";
 import { MarkingModal } from "../components/MarkingModal";
+import { ModifyModal } from "../components/ModifyModal";
 import { toIsoDate, todayParts } from "../lib/date";
 
 
@@ -29,6 +30,7 @@ export function AttendancePage() {
   const [viewMode, setViewMode] = useState("marking"); // marking | crosscheck | summary
   const [historyStudent, setHistoryStudent] = useState(null);
   const [markingStudent, setMarkingStudent] = useState(null);
+  const [modifyingStudent, setModifyingStudent] = useState(null);
 
   const toggleStudent = (slNo, paymentMethod = "Cash", quantity = 1, forceUpdate = false) => {
     const nextRows = rows.map(r => {
@@ -87,6 +89,23 @@ export function AttendancePage() {
     );
     setRows(nextRows);
     save(false, nextRows).catch(console.error);
+  };
+
+  const handleConfirmModification = async ({ qty, remark }) => {
+    if (!modifyingStudent) return;
+    
+    // 1. Update state
+    const slNo = modifyingStudent.slNo;
+    const nextRows = rows.map(r => 
+      r.slNo === slNo ? { ...r, quantity: qty, remark: remark } : r
+    );
+    setRows(nextRows);
+    
+    // 2. Save to DB
+    await save(false, nextRows);
+    
+    // 3. Close modal
+    setModifyingStudent(null);
   };
 
   const deleteStudent = async (slNo) => {
@@ -157,15 +176,20 @@ export function AttendancePage() {
   }, [rows]);
 
   const summaryLists = useMemo(() => {
+    // Only show "New Students" if they are truly new (added after the initial bulk import).
+    // We treat students with slNo <= 493 as "existing" for today's summary.
+    const allNew = info?.newStudents || [];
+    const filteredNew = allNew.filter(s => Number(s.slNo) > 493);
+
     return {
       present: rows.filter(r => r.present),
       absent: rows.filter(r => !r.present),
-      new: info?.newStudents || []
+      new: filteredNew
     };
   }, [rows, info]);
 
   return (
-    <Layout subtitle="Unified Attendance Dashboard">
+    <Layout>
       <AttendanceHeader 
         date={date} 
         setDate={setDate} 
@@ -227,21 +251,21 @@ export function AttendancePage() {
                   <h3 style={{ color: '#059669', borderBottom: '3px solid #059669', paddingBottom: '12px', marginBottom: '20px' }}>Cash</h3>
                   <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#059669', margin: '10px 0' }}>₹{paymentStats.cashAmount}</div>
                   <div className="pill" style={{ display: 'inline-block', marginTop: '10px', background: 'rgba(5, 150, 105, 0.1)', color: '#059669', border: 'none' }}>
-                    {paymentStats.cashQty} medicines
+                    {paymentStats.cashQty} {paymentStats.cashQty === 1 ? 'medicine' : 'medicines'}
                   </div>
                 </div>
                 <div className="card" style={{ textAlign: 'center', padding: '30px 20px' }}>
                   <h3 style={{ color: '#0ea5e9', borderBottom: '3px solid #0ea5e9', paddingBottom: '12px', marginBottom: '20px' }}>Online Payment</h3>
                   <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#0ea5e9', margin: '10px 0' }}>₹{paymentStats.onlineAmount}</div>
                   <div className="pill" style={{ display: 'inline-block', marginTop: '10px', background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9', border: 'none' }}>
-                    {paymentStats.onlineQty} medicines
+                    {paymentStats.onlineQty} {paymentStats.onlineQty === 1 ? 'medicine' : 'medicines'}
                   </div>
                 </div>
                 <div className="card" style={{ textAlign: 'center', padding: '30px 20px' }}>
                   <h3 style={{ color: '#dc2626', borderBottom: '3px solid #dc2626', paddingBottom: '12px', marginBottom: '20px' }}>Free</h3>
                   <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#dc2626', margin: '10px 0' }}>₹0</div>
                   <div className="pill" style={{ display: 'inline-block', marginTop: '10px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: 'none' }}>
-                    {paymentStats.freeQty} medicines
+                    {paymentStats.freeQty} {paymentStats.freeQty === 1 ? 'medicine' : 'medicines'}
                   </div>
                 </div>
               </div>
@@ -306,6 +330,7 @@ export function AttendancePage() {
               setFilter={setFilter} 
               onToggle={toggleStudent} 
               onMarkClick={setMarkingStudent}
+              onModifyClick={setModifyingStudent}
               onUpdateQuantity={updateQuantity}
               onDelete={deleteStudent}
               onViewHistory={setHistoryStudent}
@@ -339,6 +364,14 @@ export function AttendancePage() {
           isOpen={!!markingStudent} 
           onClose={() => setMarkingStudent(null)} 
           onConfirm={handleConfirmMarking}
+        />
+      )}
+      {modifyingStudent && (
+        <ModifyModal
+          student={modifyingStudent}
+          isOpen={!!modifyingStudent}
+          onClose={() => setModifyingStudent(null)}
+          onConfirm={handleConfirmModification}
         />
       )}
     </Layout>

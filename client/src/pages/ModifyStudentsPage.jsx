@@ -137,7 +137,7 @@ export function ModifyStudentsPage() {
   }, [students, filter]);
 
   return (
-    <Layout subtitle="Student Modification Base">
+    <Layout>
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>All Students ({students.length})</h2>

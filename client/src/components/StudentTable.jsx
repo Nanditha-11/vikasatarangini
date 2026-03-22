@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode }) {
+export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode }) {
   const navigate = useNavigate();
   const q = filter.trim().toLowerCase();
 
@@ -105,7 +105,7 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
           <table style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ width: 110, textAlign: 'center' }}>ID</th>
+                <th style={{ width: 80, textAlign: 'center' }}>ID</th>
                 <th style={{ textAlign: 'left', paddingLeft: '30px' }}>Student Name</th>
                 <th>Father Name</th>
                 <th style={{ width: 80, textAlign: 'center' }}>Age</th>
@@ -118,6 +118,12 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                   <>
                     <th style={{ width: 120 }}>Method</th>
                     <th style={{ width: 60, textAlign: 'center' }}>Qty</th>
+                    {viewMode === "crosscheck" && (
+                      <>
+                        <th style={{ width: 100, textAlign: 'center' }}>Modify</th>
+                        <th style={{ textAlign: 'left' }}>Remark</th>
+                      </>
+                    )}
                   </>
                 )}
               </tr>
@@ -150,7 +156,23 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                   ) : (
                     <>
                       <td><span className="pill" style={{ background: '#f3f4f6' }}>{r.paymentMethod}</span></td>
-                      <td><b>{r.quantity}</b></td>
+                      <td style={{ textAlign: 'center' }}><b>{r.quantity}</b></td>
+                      {viewMode === "crosscheck" && (
+                        <>
+                          <td style={{ textAlign: 'center' }}>
+                            <button 
+                              className="btn" 
+                              style={{ padding: '4px 12px', fontSize: '0.85em', background: '#eff6ff', borderColor: '#2563eb', color: '#2563eb' }}
+                              onClick={() => onModifyClick(r)}
+                            >
+                              Modify
+                            </button>
+                          </td>
+                          <td className="muted" style={{ fontSize: '0.85em', fontStyle: 'italic' }}>
+                            {r.remark || "-"}
+                          </td>
+                        </>
+                      )}
                     </>
                   )}
                 </tr>

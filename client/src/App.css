@@ -4,7 +4,7 @@
   --card-hover: rgba(255, 255, 255, 0.85);
   --border: rgba(255, 255, 255, 0.6);
   --border-highlight: rgba(255, 255, 255, 0.9);
-  --text: #1e3a8a;
+  --text: #334155;
   /* Deep blue for great contrast */
   --muted: #475569;
   --accent: #92bce6;
@@ -195,8 +195,8 @@ a {
 
 .btn.primary {
   border-color: rgba(255, 255, 255, 0.8);
-  background: linear-gradient(135deg, #a8cfee, #C6DEF1);
-  color: #0d2866;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
   box-shadow: 0 4px 15px rgba(100, 150, 200, 0.2);
 }
 
@@ -405,10 +405,10 @@ table {
 
 th,
 td {
-  padding: 14px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(100, 150, 200, 0.1);
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
   color: #1e293b;
 }
 
@@ -906,4 +906,230 @@ tbody tr:last-child td {
 
 .timeline-item .absent-label {
   color: #94a3b8;
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 768px) {
+  .container {
+    width: 100%;
+    padding: 10px 15px 40px;
+  }
+
+  .topbar {
+    padding: 12px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 15px;
+    border-radius: 12px;
+  }
+
+  .brand {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .brand div {
+    text-align: center;
+  }
+
+  .topbar .row {
+    width: 100%;
+    justify-content: center !important;
+    gap: 10px !important;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btn {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .header-select {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .tableWrap {
+    margin-top: 15px;
+    border-radius: 8px;
+  }
+
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .modal-content {
+    width: 95vw;
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .modal-content h3 {
+    font-size: 20px;
+  }
+
+  /* Specific page improvements */
+  .login-page-wrapper {
+    flex-direction: column;
+    padding: 15px;
+  }
+
+  .login-card-container {
+    flex: 1;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .welcome-content {
+    padding: 20px;
+    margin: 30px 10px;
+    flex-direction: column !important;
+  }
+
+  .welcome-text-center h2 {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand p {
+    display: none;
+  }
+
+  .btn span:not(.icon) {
+    display: none; /* Hide text on very small screens if it has an icon */
+  }
+
+  .btn.with-text span {
+    display: inline !important;
+  }
+}
+
+/* --- Mobile & Responsive Refinements --- */
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 10px 10px 40px !important;
+    width: 100% !important;
+  }
+
+  .topbar {
+    padding: 12px 16px !important;
+    margin-bottom: 20px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .brand {
+    gap: 12px !important;
+  }
+
+  .brand h1 { font-size: 18px !important; }
+
+  .actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .card {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  h1 { font-size: 1.8rem !important; }
+  h2 { font-size: 1.4rem !important; }
+  h3 { font-size: 1.2rem !important; }
+
+  .row {
+    gap: 8px !important;
+  }
+
+  .btn {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand h1 {
+    font-size: 1rem !important;
+  }
+
+  .logo {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .modal-content {
+    padding: 20px !important;
+    border-radius: 24px !important;
+  }
+
+  th, td {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+  
+  .btn span {
+    font-size: 12px !important;
+  }
+}
+
+/* Ensure horizontal scroll on tables doesn't break the page */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+}
+
+table {
+  min-width: 650px; /* Reduced to balance space and readability */
+}
+
+/* Login Page Specific Responsiveness */
+@media (max-width: 480px) {
+  .login-card-container {
+     padding: 10px !important;
+  }
 }

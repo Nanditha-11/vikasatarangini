@@ -16,7 +16,7 @@ export function AttendanceHistoryPage() {
   }, []);
 
   return (
-    <Layout title="Attendance History" subtitle="View and track historical attendance records">
+    <Layout title="Attendance History">
       <div className="card" style={{ padding: '24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px' }}>
           <h2 style={{ margin: 0 }}>Attendance Logs</h2>

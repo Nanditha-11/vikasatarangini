@@ -28,23 +28,23 @@ authRouter.post("/forgot-password", async (req, res) => {
     return res.status(400).json({ error: "Invalid admin email" });
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000);
+  const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
   activeOTP = String(code);
   otpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "vikasatarangini4@gmail.com",
-      pass: "oquy nwwj cfkk xtvn" 
+      user: process.env.GMAIL_USER || "vikasatarangini4@gmail.com",
+      pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw" 
     }
   });
 
   const mailOptions = {
-    from: "vikasatarangini4@gmail.com",
-    to: "vikasatarangini4@gmail.com", // send to admin email
+    from: process.env.GMAIL_USER || "vikasatarangini4@gmail.com",
+    to: email, 
     subject: "Admin Password Reset - OTP",
-    text: `Your OTP for resetting the password is: ${activeOTP}. It will expire in 10 minutes.`
+    text: `Your 4-digit OTP for resetting the password is: ${activeOTP}. It will expire in 10 minutes.`
   };
 
   try {
@@ -57,21 +57,29 @@ authRouter.post("/forgot-password", async (req, res) => {
 });
 
 authRouter.post("/reset-password", async (req, res) => {
-  const { otp, newPassword } = req.body || {};
-  if (!otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
+  const { email, otp, newPassword } = req.body || {};
+  if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
 
   if (activeOTP !== String(otp) || Date.now() > otpExpiry) {
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
 
   // update DB
-  await Admin.updateOne({}, { $set: { password: newPassword } });
-  
-  // clear OTP
-  activeOTP = null;
-  otpExpiry = null;
+  try {
+    const result = await Admin.updateOne({ username: "vikasatarangini" }, { $set: { password: newPassword } });
+    if (result.matchedCount === 0) {
+      // Create if doesn't exist (safety)
+      await Admin.create({ username: "vikasatarangini", password: newPassword });
+    }
+    
+    // clear OTP
+    activeOTP = null;
+    otpExpiry = null;
 
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Database error: " + err.message });
+  }
 });
 
 module.exports = { authRouter };

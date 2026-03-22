@@ -23,7 +23,7 @@ export function AttendanceHistoryDetailPage() {
 
   if (loading) {
     return (
-      <Layout title={`History: ${date.split('-').reverse().join('-')}`} subtitle="Loading details...">
+      <Layout title={`History: ${date.split('-').reverse().join('-')}`}>
         <div className="card" style={{ textAlign: 'center', padding: '50px' }}>Loading historical data...</div>
       </Layout>
     );
@@ -31,7 +31,7 @@ export function AttendanceHistoryDetailPage() {
 
   if (!data) {
     return (
-      <Layout title={`History: ${date.split('-').reverse().join('-')}`} subtitle="Error">
+      <Layout title={`History: ${date.split('-').reverse().join('-')}`}>
         <div className="card" style={{ textAlign: 'center', padding: '50px', color: '#dc2626' }}>Could not load data for this date.</div>
       </Layout>
     );
@@ -61,7 +61,7 @@ export function AttendanceHistoryDetailPage() {
   }) : rawList;
 
   return (
-    <Layout title={`Attendance Report: ${date.split('-').reverse().join('-')}`} subtitle="Detailed historical record">
+    <Layout title={`Attendance Report: ${date.split('-').reverse().join('-')}`}>
       <div className="card" style={{ padding: '24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px' }}>
           <button className="btn" onClick={() => nav("/history")}>← Back to History</button>
@@ -129,7 +129,7 @@ export function AttendanceHistoryDetailPage() {
           <table style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ width: 110, textAlign: 'center' }}>ID</th>
+                <th style={{ width: 80, textAlign: 'center' }}>ID</th>
                 <th style={{ textAlign: 'left', paddingLeft: '30px' }}>Name</th>
                 <th>Father Name</th>
                 <th style={{ width: 80, textAlign: 'center' }}>Age</th>
