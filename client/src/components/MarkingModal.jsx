@@ -65,6 +65,7 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
               type="number"
               min="1"
               value={qty}
+              readOnly
               onChange={(e) => setQty(parseInt(e.target.value) || 1)}
               style={{
                 flex: 1,
@@ -74,7 +75,8 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
                 fontSize: '1.1rem',
                 textAlign: 'center',
                 outline: 'none',
-                height: '48px'
+                height: '48px',
+                backgroundColor: 'white' /* explicit bg for readOnly */
               }}
             />
             <button 
@@ -155,6 +157,15 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
+        }
+        /* Remove arrows from number input */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
         }
       `}</style>
     </div>

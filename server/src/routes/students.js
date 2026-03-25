@@ -74,19 +74,25 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "name and phone are required" });
   }
 
-  const normalizedName = String(name).trim();
+  const normalizedName = String(name).trim().toLowerCase();
   const normalizedPhone = String(phone).trim();
-  const normalizedFatherName = String(fatherName || "").trim();
+  const normalizedFatherName = String(fatherName || "").trim().toLowerCase();
 
-  // Duplicate Check: Name, Phone, FatherName
-  const existing = await Student.findOne({ 
-    name: normalizedName, 
+  // Refined Duplicate Check: Match phone/father and partial name
+  const potentialMatches = await Student.find({ 
     phone: normalizedPhone, 
     fatherName: normalizedFatherName 
   }).lean();
 
-  if (existing && existing.slNo !== String(slNo).trim()) {
-    return res.status(400).json({ error: "Student already exists with these details" });
+  const isDuplicate = potentialMatches.some(m => {
+    if (m.slNo === String(slNo).trim()) return false; // Ignore same student
+    const existingName = String(m.name).trim().toLowerCase();
+    // Block if one name is contained in the other
+    return normalizedName.includes(existingName) || existingName.includes(normalizedName);
+  });
+
+  if (isDuplicate) {
+    return res.status(400).json({ error: "Student already exists with similar details" });
   }
 
   if (!slNo) {

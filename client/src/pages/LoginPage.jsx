@@ -17,7 +17,7 @@ export function LoginPage() {
     "Jayashankar Bhupalpally": ["Bhupalpally"],
     "Jogulamba Gadwal": ["Gadwal"],
     "Kamareddy": ["Kamareddy"],
-    "Karimnagar": ["Karimnagar"],
+    "Karimnagar": ["Huzurabad"],
     "Khammam": ["Khammam"],
     "Kumuram Bheem": ["Asifabad"],
     "Mahabubabad": ["Mahabubabad"],

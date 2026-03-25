@@ -70,6 +70,19 @@ connectDb()
       });
     }
 
+    // Ensure Karimnagar/Huzurabad admin exists
+    await Admin.findOneAndUpdate(
+      { district: "Karimnagar", place: "Huzurabad" },
+      { 
+        username: "vikasatarangini", 
+        password: "jeeyarswamy",
+        email: "vikasatarangini4@gmail.com",
+        district: "Karimnagar",
+        place: "Huzurabad"
+      },
+      { upsert: true }
+    );
+
     const localIp = getLocalIp();
     app.listen(port, "0.0.0.0", () => {
       // eslint-disable-next-line no-console
