@@ -44,21 +44,56 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#064e3b' }}>Quantity</label>
-          <input
-            type="number"
-            min="1"
-            value={qty}
-            onChange={(e) => setQty(parseInt(e.target.value) || 1)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: '1px solid #d1d5db',
-              fontSize: '1rem',
-              outline: 'none',
-              transition: 'border-color 0.2s'
-            }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button 
+              onClick={() => setQty(prev => Math.max(1, prev - 1))}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#374151'
+              }}
+            >-</button>
+            <input
+              type="number"
+              min="1"
+              value={qty}
+              onChange={(e) => setQty(parseInt(e.target.value) || 1)}
+              style={{
+                flex: 1,
+                padding: '12px',
+                borderRadius: '12px',
+                border: '1px solid #d1d5db',
+                fontSize: '1.1rem',
+                textAlign: 'center',
+                outline: 'none',
+                height: '48px'
+              }}
+            />
+            <button 
+               onClick={() => setQty(prev => prev + 1)}
+               style={{
+                 width: '48px',
+                 height: '48px',
+                 borderRadius: '12px',
+                 border: '1px solid #d1d5db',
+                 background: '#f9fafb',
+                 fontSize: '1.5rem',
+                 cursor: 'pointer',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 color: '#374151'
+               }}
+            >+</button>
+          </div>
         </div>
 
         <div style={{ marginBottom: '30px' }}>

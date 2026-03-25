@@ -74,6 +74,21 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "name and phone are required" });
   }
 
+  const normalizedName = String(name).trim();
+  const normalizedPhone = String(phone).trim();
+  const normalizedFatherName = String(fatherName || "").trim();
+
+  // Duplicate Check: Name, Phone, FatherName
+  const existing = await Student.findOne({ 
+    name: normalizedName, 
+    phone: normalizedPhone, 
+    fatherName: normalizedFatherName 
+  }).lean();
+
+  if (existing && existing.slNo !== String(slNo).trim()) {
+    return res.status(400).json({ error: "Student already exists with these details" });
+  }
+
   if (!slNo) {
     slNo = await getNextSlNo();
   }
