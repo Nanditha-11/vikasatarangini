@@ -10,12 +10,12 @@ let activeOTP = null;
 let otpExpiry = null;
 
 authRouter.post("/login", async (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+  const { username, password, district, place } = req.body || {};
+  if (!username || !password || !district || !place) return res.status(400).json({ error: "Missing fields" });
 
-  const admin = await Admin.findOne({ username }).lean();
+  const admin = await Admin.findOne({ username, district, place }).lean();
   if (!admin || admin.password !== password) {
-    return res.status(401).json({ error: "Invalid credentials" });
+    return res.status(401).json({ error: "Invalid credentials for this location" });
   }
 
   const token = signAdminToken();
@@ -66,10 +66,9 @@ authRouter.post("/reset-password", async (req, res) => {
 
   // update DB
   try {
-    const result = await Admin.updateOne({ username: "vikasatarangini" }, { $set: { password: newPassword } });
+    const result = await Admin.updateOne({ email }, { $set: { password: newPassword } });
     if (result.matchedCount === 0) {
-      // Create if doesn't exist (safety)
-      await Admin.create({ username: "vikasatarangini", password: newPassword });
+      return res.status(404).json({ error: "Admin account not found" });
     }
     
     // clear OTP

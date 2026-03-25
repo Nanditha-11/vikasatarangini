@@ -71,8 +71,7 @@ export function AttendanceHeader({ date, setDate, info, presentCount, absentCoun
 
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Dashboard</h2>
-          <p className="muted" style={{ margin: 0 }}>Manage status, payments and medicine stock</p>
+          <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Home</h2>
         </div>
 
         {info && (

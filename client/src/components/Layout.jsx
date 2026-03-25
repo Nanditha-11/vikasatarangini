@@ -16,7 +16,7 @@ export function Layout({ title, subtitle, children }) {
         </div>
 
         <div className="row" style={{ gap: '20px', flex: 1, justifyContent: 'center' }}>
-          <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/")}>Dashboard</button>
+          <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/")}>Home</button>
           <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/history")}>Attendance History</button>
           <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/about")}>About</button>
         </div>

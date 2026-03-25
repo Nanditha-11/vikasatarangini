@@ -61,7 +61,13 @@ connectDb()
     if (count === 0) {
       const username = process.env.ADMIN_USERNAME || "admin";
       const password = process.env.ADMIN_PASSWORD || "admin123";
-      await Admin.create({ username, password, email: "vikasatarangini4@gmail.com" });
+      await Admin.create({ 
+        username, 
+        password, 
+        email: "vikasatarangini4@gmail.com",
+        district: "District 1",
+        place: "Place A"
+      });
     }
 
     const localIp = getLocalIp();

@@ -668,6 +668,19 @@ tbody tr:last-child td {
   align-items: start;
 }
 
+.dashboard-grid {
+  display: flex !important;
+  flex-direction: column-reverse !important; /* Sidebar on top for mobile */
+}
+
+@media (min-width: 1025px) {
+  .dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 1.5fr 350px !important;
+    flex-direction: row !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr !important;

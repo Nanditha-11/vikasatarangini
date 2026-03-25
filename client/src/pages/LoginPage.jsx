@@ -5,7 +5,50 @@ import { apiFetch, setToken } from "../lib/api";
 export function LoginPage() {
   const nav = useNavigate();
   const [view, setView] = useState("login"); // login | forgot | otp | reset
-  const [username] = useState("vikasatarangini");
+  
+  // District/Place Data (Telangana Districts)
+  const locations = {
+    "Adilabad": ["Adilabad"],
+    "Bhadradri Kothagudem": ["Kothagudem"],
+    "Hanumakonda": ["Warangal"],
+    "Hyderabad": ["Hyderabad"],
+    "Jagtial": ["Jagtial"],
+    "Jangaon": ["Jangaon"],
+    "Jayashankar Bhupalpally": ["Bhupalpally"],
+    "Jogulamba Gadwal": ["Gadwal"],
+    "Kamareddy": ["Kamareddy"],
+    "Karimnagar": ["Karimnagar"],
+    "Khammam": ["Khammam"],
+    "Kumuram Bheem": ["Asifabad"],
+    "Mahabubabad": ["Mahabubabad"],
+    "Mahabubnagar": ["Mahabubnagar"],
+    "Mancherial": ["Mancherial"],
+    "Medak": ["Medak"],
+    "Medchal–Malkajgiri": ["Medchal"],
+    "Mulugu": ["Mulugu"],
+    "Nagarkurnool": ["Nagarkurnool"],
+    "Nalgonda": ["Nalgonda"],
+    "Narayanpet": ["Narayanpet"],
+    "Nirmal": ["Nirmal"],
+    "Nizamabad": ["Nizamabad"],
+    "Peddapalli": ["Peddapalli"],
+    "Rajanna Sircilla": ["Sircilla"],
+    "Rangareddy": ["Shamshabad"],
+    "Sangareddy": ["Sangareddy"],
+    "Siddipet": ["Siddipet"],
+    "Suryapet": ["Suryapet"],
+    "Vikarabad": ["Vikarabad"],
+    "Wanaparthy": ["Wanaparthy"],
+    "Warangal": ["Warangal"],
+    "Yadadri Bhuvanagiri": ["Bhuvanagiri"]
+  };
+
+  const [districts] = useState(Object.keys(locations));
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState("");
+  const [places, setPlaces] = useState([]);
+
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   
   const [email, setEmail] = useState("");
@@ -17,15 +60,33 @@ export function LoginPage() {
 
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
+  // Update places when district changes
+  useEffect(() => {
+    if (selectedDistrict) {
+      setPlaces(locations[selectedDistrict]);
+      setSelectedPlace("");
+    } else {
+      setPlaces([]);
+    }
+  }, [selectedDistrict]);
+
   async function onLogin(e) {
     e.preventDefault();
+    if (!selectedDistrict || !selectedPlace) {
+      return setError("Please select both District and Place");
+    }
     setError("");
     setBusy(true);
     try {
       const data = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username, 
+          password, 
+          district: selectedDistrict, 
+          place: selectedPlace 
+        }),
       });
       setToken(data.token);
       nav("/", { replace: true });
@@ -125,29 +186,61 @@ export function LoginPage() {
 
               <form onSubmit={onLogin} style={{ marginTop: 12 }}>
                 <div className="field">
-                  <label>Username</label>
-                  <input
+                  <label>District</label>
+                  <select
                     className="input"
-                    value={username}
-                    readOnly
-                    style={{ backgroundColor: "rgba(255,255,255,0.05)", cursor: "not-allowed" }}
-                  />
-                </div>
-                <div className="field">
-                  <label>Password</label>
-                  <input
-                    className="input"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    autoComplete="current-password"
-                  />
+                    value={selectedDistrict}
+                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                    style={{ appearance: 'auto', paddingRight: '30px' }}
+                  >
+                    <option value="">-- Select District --</option>
+                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </div>
 
-                <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px', fontSize: '1.1em' }}>
-                  {busy ? "Signing in..." : "Login"}
-                </button>
+                {selectedDistrict && (
+                  <div className="field">
+                    <label>Place</label>
+                    <select
+                      className="input"
+                      value={selectedPlace}
+                      onChange={(e) => setSelectedPlace(e.target.value)}
+                      style={{ appearance: 'auto', paddingRight: '30px' }}
+                    >
+                      <option value="">-- Select Place --</option>
+                      {places.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {selectedPlace && (
+                  <>
+                    <div className="field">
+                      <label>Username</label>
+                      <input
+                        className="input"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter username"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Password</label>
+                      <input
+                        className="input"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter password"
+                        autoComplete="current-password"
+                      />
+                    </div>
+
+                    <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px', fontSize: '1.1em' }}>
+                      {busy ? "Signing in..." : "Login"}
+                    </button>
+                  </>
+                )}
               </form>
               <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <button 

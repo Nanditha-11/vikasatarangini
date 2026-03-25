@@ -200,7 +200,7 @@ export function AttendancePage() {
         soldCount={totalSold}
       />
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1.5fr) 350px', gap: '24px' }}>
+      <div className="grid dashboard-grid" style={{ gap: '24px' }}>
         <div>
           <StudentAdmin 
             onRefresh={() => load(date)} 

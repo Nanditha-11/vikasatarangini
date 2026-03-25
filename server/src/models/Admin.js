@@ -2,9 +2,11 @@ const mongoose = require("mongoose");
 
 const adminSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, default: "admin", unique: true },
-    password: { type: String, required: true, default: "admin123" },
-    email: { type: String, required: true, default: "vikasatarangini4@gmail.com" },
+    username: { type: String, required: true, unique: true, index: true },
+    password: { type: String, required: true },
+    email: { type: String, required: true },
+    district: { type: String, required: true, default: "Default District" },
+    place: { type: String, required: true, default: "Default Place" },
   },
   { timestamps: true }
 );
