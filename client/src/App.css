@@ -690,9 +690,12 @@ tbody tr:last-child td {
   align-items: center;
   justify-content: center;
   gap: 30px;
-  min-height: 80vh;
+  min-height: 100vh;
   width: 100%;
   padding: 20px;
+  background: linear-gradient(135deg, #0d2866 0%, #0072ff 100%); /* Deep brand gradient */
+  position: relative;
+  overflow: hidden;
 }
 
 .login-side-image {
