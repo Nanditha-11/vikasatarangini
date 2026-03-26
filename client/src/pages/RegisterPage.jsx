@@ -35,7 +35,8 @@ export function RegisterPage() {
       return setError("Please select a District and enter your Place");
     }
     setError("");
-    const formattedPlace = typedPlace.trim().charAt(0).toUpperCase() + typedPlace.trim().slice(1);
+    const rawPlace = typedPlace.trim();
+    const formattedPlace = rawPlace ? rawPlace.charAt(0).toUpperCase() + rawPlace.slice(1).toLowerCase() : "";
     
     try {
       await apiFetch("/api/auth/register", {
@@ -121,7 +122,7 @@ export function RegisterPage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val) {
-                    setTypedPlace(val.charAt(0).toUpperCase() + val.slice(1));
+                    setTypedPlace(val.charAt(0).toUpperCase() + val.slice(1).toLowerCase());
                   } else {
                     setTypedPlace("");
                   }
@@ -206,10 +207,15 @@ export function RegisterPage() {
                   )}
                 </button>
               </div>
-              {formData.password && !(/^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(formData.password)) && (
-                <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px', color: '#dc2626' }}>
-                  Require: At least 8 characters, letters, numbers, and special chars.
-                </p>
+              {formData.password && (
+                (() => {
+                  const p = formData.password;
+                  if (p.length < 8) return <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px', color: '#dc2626' }}>Password must be at least 8 characters</p>;
+                  if (!/[a-zA-Z]/.test(p) || !/[0-9]/.test(p) || !/[!@#$%^&*(),.?":{}|<>]/.test(p)) {
+                    return <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px', color: '#dc2626' }}>Password must contain letters, numbers, and special symbols</p>;
+                  }
+                  return null;
+                })()
               )}
             </div>
 

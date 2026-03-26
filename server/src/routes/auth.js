@@ -152,9 +152,12 @@ authRouter.post("/reset-password", async (req, res) => {
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
 
-  if (!isPasswordComplex(newPassword)) {
-    return res.status(400).json({ error: "Password must be at least 8 characters and contain letters, numbers, and special characters." });
-  }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      return res.status(400).json({ error: "Password must contain letters, numbers, and special symbols" });
+    }
 
   // update DB
   try {
@@ -187,7 +190,7 @@ authRouter.post("/register", async (req, res) => {
       username = username.charAt(0).toUpperCase() + username.slice(1);
     }
     if (place) {
-      place = place.charAt(0).toUpperCase() + place.slice(1);
+      place = place.charAt(0).toUpperCase() + place.slice(1).toLowerCase();
     }
     password = password?.trim();
 
