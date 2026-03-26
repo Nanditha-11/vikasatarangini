@@ -56,32 +56,48 @@ const port = Number(process.env.PORT || 5000);
 
 connectDb()
   .then(async () => {
-    // Sync Admin credentials from ENV to DB if empty
-    // Ensure the default 'admin' account exists
-    await Admin.findOneAndUpdate(
-      { username: "admin" },
-      { 
-        username: "admin", 
-        password: "jeeyarswamy",
-        email: "vikasatarangini4@gmail.com",
-        district: "Headquarters",
-        place: "Headquarters"
-      },
-      { upsert: true }
-    );
+    // Function to ensure an admin account exists
+    const ensureAdmin = async (adminData) => {
+      try {
+        await Admin.updateOne(
+          { username: adminData.username },
+          { $set: adminData },
+          { upsert: true }
+        );
+      } catch (err) {
+        if (err.code === 11000) {
+          // Duplicate key error, likely already exists (race condition)
+          console.log(`Admin account ${adminData.username} already exists or was created simultaneously.`);
+        } else {
+          throw err;
+        }
+      }
+    };
 
-    // Ensure the 'vikasatarangini' account exists for Huzurabad
-    await Admin.findOneAndUpdate(
-      { username: "vikasatarangini" },
-      { 
-        username: "vikasatarangini", 
-        password: "jeeyarswamy",
-        email: "vikasatarangini4@gmail.com",
-        district: "Karimnagar",
-        place: "Huzurabad"
-      },
-      { upsert: true }
-    );
+    // Ensure the default accounts exist
+    await ensureAdmin({
+      username: "admin", 
+      password: "jeeyarswamy",
+      email: "vikasatarangini4@gmail.com",
+      district: "Headquarters",
+      place: "Headquarters"
+    });
+
+    await ensureAdmin({
+      username: "vikasatarangini", 
+      password: "jeeyarswamy",
+      email: "vikasatarangini4@gmail.com",
+      district: "Karimnagar",
+      place: "Huzurabad"
+    });
+
+    await ensureAdmin({
+      username: "yathipathisd", 
+      password: "jeeyarswamy",
+      email: "vikasatarangini4@gmail.com",
+      district: "Karimnagar",
+      place: "Huzurabad"
+    });
 
     const localIp = getLocalIp();
     app.listen(port, "0.0.0.0", () => {
