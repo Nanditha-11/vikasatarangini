@@ -4,7 +4,7 @@ function signAdminToken(admin) {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("Missing JWT_SECRET env var");
   return jwt.sign({ 
-    role: "admin", 
+    role: admin.role || "admin", 
     username: admin.username,
     district: admin.district,
     place: admin.place 

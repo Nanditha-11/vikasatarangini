@@ -95,6 +95,11 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
 
 attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
   const { district, place, username } = req.user;
+  
+  if (!username) {
+    return res.status(401).json({ error: "Session expired or invalid. Please logout and login again." });
+  }
+
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 

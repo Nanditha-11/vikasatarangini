@@ -74,6 +74,11 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
 
 studentsRouter.post("/", requireAuth, async (req, res) => {
   const { district, place, username } = req.user;
+  
+  if (!username) {
+    return res.status(401).json({ error: "Session expired or invalid. Please logout and login again." });
+  }
+
   let { slNo, name, fatherName = "", age = null, phone } = req.body || {};
 
   if (!name || !phone) {
