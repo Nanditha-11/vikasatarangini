@@ -91,14 +91,6 @@ connectDb()
       place: "Huzurabad"
     });
 
-    await ensureAdmin({
-      username: "yathipathisd", 
-      password: "jeeyarswamy",
-      email: "vikasatarangini4@gmail.com",
-      district: "Karimnagar",
-      place: "Huzurabad"
-    });
-
     const localIp = getLocalIp();
     app.listen(port, "0.0.0.0", () => {
       // eslint-disable-next-line no-console
