@@ -41,11 +41,15 @@ authRouter.post("/login", async (req, res) => {
   }
 
   const token = signAdminToken(admin);
+  
+  // Ensure username is capitalized for display
+  const displayUsername = admin.username.charAt(0).toUpperCase() + admin.username.slice(1);
+
   return res.json({ 
     token,
     user: {
       id: admin._id,
-      username: admin.username,
+      username: displayUsername,
       role: admin.role,
       district: admin.district,
       place: admin.place
@@ -115,8 +119,11 @@ authRouter.post("/reset-password", async (req, res) => {
 
 authRouter.post("/register", async (req, res) => {
   try {
-    let { username, password, email, district, place } = req.body;
+    let { username, password, email, district, place, whatsappLink } = req.body;
     username = username?.trim();
+    if (username) {
+      username = username.charAt(0).toUpperCase() + username.slice(1);
+    }
     password = password?.trim();
     
     // Check if username already exists
@@ -133,6 +140,7 @@ authRouter.post("/register", async (req, res) => {
       email,
       district,
       place,
+      whatsappLink: whatsappLink || "",
       status: "pending",
       role: "admin"
     });

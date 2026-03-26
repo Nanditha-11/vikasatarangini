@@ -283,7 +283,14 @@ export function LoginPage() {
                   <input
                     className="input"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        setUsername(val.charAt(0).toUpperCase() + val.slice(1));
+                      } else {
+                        setUsername("");
+                      }
+                    }}
                     placeholder="Enter username"
                     required
                   />

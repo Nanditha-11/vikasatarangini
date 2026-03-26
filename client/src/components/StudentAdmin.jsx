@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
 
 export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [] }) {
   const [showAddManual, setShowAddManual] = useState(false);
   const [newStudent, setNewStudent] = useState({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
+  const [config, setConfig] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/location-config")
+      .then(setConfig)
+      .catch(err => console.error("Failed to load location config:", err));
+  }, []);
 
   const handleAddManual = async () => {
     if (!newStudent.name || !newStudent.phone) return alert("Name and Phone are required");
@@ -20,9 +27,19 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [] }) 
       let num = res.student?.phone?.replace(/\D/g, "");
       if (num) {
         if (num.length === 10) num = "91" + num;
-        const link = "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
-        const inviteMsg = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, ${res.student.name}. Please join our official WhatsApp group by clicking the link below:\n\n${link}`;
-        window.open(`https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(inviteMsg)}`, "_blank");
+        
+        const link = config?.whatsappLink || "";
+        const template = config?.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`;
+        
+        const inviteMsg = template
+          .replace("{{name}}", res.student.name)
+          .replace("{{link}}", link);
+
+        if (link) {
+          window.open(`https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(inviteMsg)}`, "_blank");
+        } else {
+          console.log("No WhatsApp link configured for this location, skipping auto-invite.");
+        }
       }
 
       setShowAddManual(false);

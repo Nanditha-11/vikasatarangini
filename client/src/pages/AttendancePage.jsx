@@ -179,10 +179,8 @@ export function AttendancePage() {
   }, [rows]);
 
   const summaryLists = useMemo(() => {
-    // Only show "New Students" if they are truly new (added after the initial bulk import).
-    // We treat students with slNo <= 493 as "existing" for today's summary.
-    const allNew = info?.newStudents || [];
-    const filteredNew = allNew.filter(s => Number(s.slNo) > 493);
+    // Show all students identified as new by the backend (created today)
+    const filteredNew = info?.newStudents || [];
 
     return {
       present: rows.filter(r => r.present),

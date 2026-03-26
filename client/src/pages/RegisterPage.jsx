@@ -129,7 +129,14 @@ export function RegisterPage() {
               <input
                 className="input"
                 value={formData.username}
-                onChange={(e) => setFormData({...formData, username: e.target.value})}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    setFormData({...formData, username: val.charAt(0).toUpperCase() + val.slice(1)});
+                  } else {
+                    setFormData({...formData, username: ""});
+                  }
+                }}
                 placeholder="Choose a username"
                 required
               />
@@ -158,6 +165,19 @@ export function RegisterPage() {
                 required
                 autoComplete="new-password"
               />
+            </div>
+
+            <div className="field">
+              <label>WhatsApp Group Link</label>
+              <input
+                className="input"
+                value={formData.whatsappLink || ""}
+                onChange={(e) => setFormData({...formData, whatsappLink: e.target.value})}
+                placeholder="https://chat.whatsapp.com/..."
+              />
+              <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px' }}>
+                Optional: Provide the WhatsApp group link for your district.
+              </p>
             </div>
 
             <button 

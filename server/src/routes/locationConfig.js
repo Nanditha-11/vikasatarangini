@@ -5,7 +5,14 @@ const LocationConfig = require("../models/LocationConfig");
 const locationConfigRouter = express.Router();
 
 locationConfigRouter.get("/", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  let { district, place } = req.user;
+  
+  // Allow Master admin to override location via query
+  if (req.user.role === "master" && req.query.district && req.query.place) {
+    district = req.query.district;
+    place = req.query.place;
+  }
+
   if (!district || !place) return res.status(400).json({ error: "Location not set" });
 
   let config = await LocationConfig.findOne({ district, place }).lean();
@@ -23,8 +30,14 @@ locationConfigRouter.get("/", requireAuth, async (req, res) => {
 });
 
 locationConfigRouter.post("/", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
-  const { whatsappLink, welcomeMessage, inviteTemplate } = req.body;
+  let { district, place } = req.user;
+  const { whatsappLink, welcomeMessage, inviteTemplate, district: d, place: p } = req.body;
+  
+  // Allow Master admin to override location via body
+  if (req.user.role === "master" && d && p) {
+    district = d;
+    place = p;
+  }
 
   const config = await LocationConfig.findOneAndUpdate(
     { district, place },

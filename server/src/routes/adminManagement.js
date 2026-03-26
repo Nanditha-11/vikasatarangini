@@ -26,6 +26,8 @@ adminManagementRouter.post("/", async (req, res) => {
   }
 });
 
+const LocationConfig = require("../models/LocationConfig");
+
 // Approve an admin
 adminManagementRouter.post("/approve/:id", async (req, res) => {
   const id = req.params.id.trim();
@@ -36,6 +38,25 @@ adminManagementRouter.post("/approve/:id", async (req, res) => {
       console.log('[AdminMgmt] Admin NOT FOUND for approve:', id);
       return res.status(404).json({ error: "Admin not found" });
     }
+
+    // Automatically create/update LocationConfig with the provided WhatsApp link
+    if (admin.district && admin.place) {
+      await LocationConfig.findOneAndUpdate(
+        { district: admin.district, place: admin.place },
+        { 
+          $set: { 
+            district: admin.district, 
+            place: admin.place, 
+            whatsappLink: admin.whatsappLink || "",
+            welcomeMessage: "Jai Srimannarayana! Thank you for attending the session today.",
+            inviteTemplate: `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`
+          } 
+        },
+        { upsert: true }
+      );
+      console.log(`[AdminMgmt] Initialized LocationConfig for ${admin.district} / ${admin.place}`);
+    }
+
     console.log('[AdminMgmt] Successfully approved:', id);
     res.json(admin);
   } catch (err) {

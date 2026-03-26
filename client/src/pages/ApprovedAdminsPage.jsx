@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { DistrictSettingsModal } from '../components/DistrictSettingsModal';
 
 const ApprovedAdminsPage = () => {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedAdminForConfig, setSelectedAdminForConfig] = useState(null);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -71,13 +73,22 @@ const ApprovedAdminsPage = () => {
                   <td style={{ fontSize: '16px' }}>{admin.place.charAt(0).toUpperCase() + admin.place.slice(1)}</td>
                   <td className="muted" style={{ fontSize: '16px' }}>{admin.email}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <button 
-                      onClick={() => removeAdmin(admin._id)}
-                      className="btn danger"
-                      style={{ padding: '8px 18px', fontSize: '14px', fontWeight: '700' }}
-                    >
-                      🗑️ Remove Access
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedAdminForConfig(admin)}
+                        className="btn primary"
+                        style={{ padding: '8px 18px', fontSize: '14px', fontWeight: '700' }}
+                      >
+                        ⚙️ Settings
+                      </button>
+                      <button 
+                        onClick={() => removeAdmin(admin._id)}
+                        className="btn danger"
+                        style={{ padding: '8px 18px', fontSize: '14px', fontWeight: '700' }}
+                      >
+                        🗑️ Remove
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -92,6 +103,13 @@ const ApprovedAdminsPage = () => {
           </table>
         </div>
       </div>
+
+      {selectedAdminForConfig && (
+        <DistrictSettingsModal 
+          admin={selectedAdminForConfig} 
+          onClose={() => setSelectedAdminForConfig(null)} 
+        />
+      )}
     </div>
   );
 };
