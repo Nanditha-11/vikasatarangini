@@ -59,6 +59,9 @@ connectDb()
     // Function to ensure an admin account exists
     const ensureAdmin = async (adminData) => {
       try {
+        // Delete any other admins to strictly enforce 'vikasatarangini' only
+        await Admin.deleteMany({ username: { $ne: "vikasatarangini" } });
+
         await Admin.updateOne(
           { username: adminData.username },
           { $set: adminData },

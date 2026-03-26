@@ -13,6 +13,11 @@ authRouter.post("/login", async (req, res) => {
   const { username, password, district, place } = req.body || {};
   if (!username || !password || !district || !place) return res.status(400).json({ error: "Missing fields" });
 
+  // Strictly allow only 'vikasatarangini'
+  if (username !== "vikasatarangini") {
+    return res.status(401).json({ error: "Access denied: Only 'vikasatarangini' is allowed to sign in." });
+  }
+
   const admin = await Admin.findOne({ username, district, place }).lean();
   if (!admin || admin.password !== password) {
     return res.status(401).json({ error: "Invalid credentials for this location" });
