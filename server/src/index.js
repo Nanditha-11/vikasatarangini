@@ -84,9 +84,14 @@ async function initialize() {
     
     const ensureAdmin = async (adminData) => {
       try {
+        // Only set the password if we are creating the user for the first time
+        const { password, ...otherData } = adminData;
         await Admin.updateOne(
           { username: adminData.username },
-          { $set: adminData },
+          { 
+            $set: otherData,
+            $setOnInsert: { password } 
+          },
           { upsert: true }
         );
       } catch (err) {
