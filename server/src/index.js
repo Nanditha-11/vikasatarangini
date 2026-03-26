@@ -57,22 +57,22 @@ const port = Number(process.env.PORT || 5000);
 connectDb()
   .then(async () => {
     // Sync Admin credentials from ENV to DB if empty
-    const count = await Admin.countDocuments();
-    if (count === 0) {
-      const username = process.env.ADMIN_USERNAME || "admin";
-      const password = process.env.ADMIN_PASSWORD || "admin123";
-      await Admin.create({ 
-        username, 
-        password, 
-        email: "vikasatarangini4@gmail.com",
-        district: "District 1",
-        place: "Place A"
-      });
-    }
-
-    // Ensure Karimnagar/Huzurabad admin exists
+    // Ensure the default 'admin' account exists
     await Admin.findOneAndUpdate(
-      { district: "Karimnagar", place: "Huzurabad" },
+      { username: "admin" },
+      { 
+        username: "admin", 
+        password: "jeeyarswamy",
+        email: "vikasatarangini4@gmail.com",
+        district: "Headquarters",
+        place: "Headquarters"
+      },
+      { upsert: true }
+    );
+
+    // Ensure the 'vikasatarangini' account exists for Huzurabad
+    await Admin.findOneAndUpdate(
+      { username: "vikasatarangini" },
       { 
         username: "vikasatarangini", 
         password: "jeeyarswamy",
