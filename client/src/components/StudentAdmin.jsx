@@ -41,17 +41,19 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newStudent),
       });
-      // STRICT ISOLATION: Always use the link provided by the admin during registration.
-      // Prioritize: 1. Live profile from /me, 2. Logged in user from localStorage
+      // RESOLVE CORRECT LINK: 
+      // 1. If we have a resolved config (from district/place search), it's the most accurate for the view.
+      // 2. Fallback to admin profile or user localStorage.
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       
-      const adminLink = adminProfile?.whatsappLink || user?.whatsappLink;
+      const link = (config?.whatsappLink && config.whatsappLink.startsWith("http"))
+        ? config.whatsappLink
+        : (adminProfile?.whatsappLink || user?.whatsappLink || "");
       
       let num = res.student?.phone?.replace(/\D/g, "");
       if (num) {
         if (num.length === 10) num = "91" + num;
-        const link = adminLink || (config?.whatsappLink && config.whatsappLink.startsWith("http") ? config.whatsappLink : "");
         const template = config?.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`;
         const inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
 
