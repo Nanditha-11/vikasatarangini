@@ -24,7 +24,7 @@ authRouter.get("/places/:district", async (req, res) => {
   try {
     const { district } = req.params;
     // Get unique approved places for this district
-    const places = await Admin.distinct("place", { 
+    const places = await Admin.distinct("place", {
       district: { $regex: new RegExp(`^${district}$`, "i") },
       status: "approved"
     });
@@ -41,10 +41,10 @@ authRouter.post("/login", async (req, res) => {
   password = password?.trim();
   if (!username || !password || !district || !place) return res.status(400).json({ error: "Missing fields" });
 
-  const admin = await Admin.findOne({ 
-    username: { $regex: new RegExp(`^${username}$`, "i") }, 
-    district, 
-    place 
+  const admin = await Admin.findOne({
+    username: { $regex: new RegExp(`^${username}$`, "i") },
+    district,
+    place
   }).lean();
   if (!admin || admin.password !== password) {
     return res.status(401).json({ error: "Invalid credentials" });
@@ -56,11 +56,11 @@ authRouter.post("/login", async (req, res) => {
   }
 
   const token = signAdminToken(admin);
-  
+
   // Ensure username is capitalized for display
   const displayUsername = admin.username.charAt(0).toUpperCase() + admin.username.slice(1);
 
-  return res.json({ 
+  return res.json({
     token,
     user: {
       id: admin._id,
@@ -77,7 +77,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   try {
     const admin = await Admin.findOne({ username: req.user.username }).lean();
     if (!admin) return res.status(404).json({ error: "Admin not found" });
-    
+
     // Don't send password
     const { password, ...safeData } = admin;
     res.json(safeData);
@@ -88,7 +88,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
 
 authRouter.post("/forgot-password", async (req, res) => {
   const { email } = req.body || {};
-  const admin = await Admin.findOne({ 
+  const admin = await Admin.findOne({
     $or: [
       { email: { $regex: new RegExp(`^${email}$`, "i") } },
       { username: { $regex: new RegExp(`^${email}$`, "i") } }
@@ -106,13 +106,13 @@ authRouter.post("/forgot-password", async (req, res) => {
     service: "gmail",
     auth: {
       user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-      pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw" 
+      pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw"
     }
   });
 
   const mailOptions = {
     from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-    to: email, 
+    to: email,
     subject: "Admin Password Reset - OTP",
     text: `Your 4-digit OTP for resetting the password is: ${activeOTP}. It will expire in 10 minutes.`
   };
@@ -158,7 +158,7 @@ authRouter.post("/reset-password", async (req, res) => {
 
   // update DB
   try {
-    const query = { 
+    const query = {
       $or: [
         { email: { $regex: new RegExp(`^${email}$`, "i") } },
         { username: { $regex: new RegExp(`^${email}$`, "i") } }
@@ -168,7 +168,7 @@ authRouter.post("/reset-password", async (req, res) => {
     if (result.matchedCount === 0) {
       return res.status(404).json({ error: "Admin account not found" });
     }
-    
+
     // clear OTP
     activeOTP = null;
     otpExpiry = null;
@@ -194,10 +194,10 @@ authRouter.post("/register", async (req, res) => {
     if (!isPasswordComplex(password)) {
       return res.status(400).json({ error: "Password must be at least 8 characters and contain letters, numbers, and special characters." });
     }
-    
+
     // Check if username already exists
-    const existing = await Admin.findOne({ 
-      username: { $regex: new RegExp(`^${username}$`, "i") } 
+    const existing = await Admin.findOne({
+      username: { $regex: new RegExp(`^${username}$`, "i") }
     });
     if (existing) {
       return res.status(400).json({ error: "Username already taken" });
@@ -222,7 +222,7 @@ authRouter.post("/register", async (req, res) => {
         service: "gmail",
         auth: {
           user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-          pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw" 
+          pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw"
         }
       });
 
@@ -230,27 +230,12 @@ authRouter.post("/register", async (req, res) => {
         from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
         to: "smarnamrutham3@gmail.com",
         subject: "New Admin Registration - Action Required",
-        html: `
-          <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="color: #0d2866;">New Admin Registration</h2>
-            <p>A new admin has registered and is pending approval:</p>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Username:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${username}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>District:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${district}</td></tr>
-              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Place:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${place}</td></tr>
-            </table>
-            <div style="margin-top: 30px; text-align: center;">
-              <a href="https://vikasatarangini.onrender.com/api/admins/approve-direct/${admin._id}?secret=swarnamrutham_direct_approve" 
-                 style="display: inline-block; padding: 12px 24px; background-color: #059669; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                 APPROVE THIS ADMIN NOW
-              </a>
-            </div>
-            <p style="margin-top: 20px; font-size: 13px; color: #666;">
-              Clicking the button above will immediately approve the user. For more options, please log in to the Master Dashboard.
-            </p>
-          </div>
-        `
+        text: `A new admin has registered and is pending approval.\n\n` +
+          `Username: ${username}\n` +
+          `Email: ${email}\n` +
+          `District: ${district}\n` +
+          `Place: ${place}\n\n` +
+          `Please login to the Master Dashboard to approve or reject this request.`
       };
 
       await transporter.sendMail(adminMailOptions);

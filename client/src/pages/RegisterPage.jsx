@@ -208,7 +208,7 @@ export function RegisterPage() {
               </div>
               {formData.password && !(/^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(formData.password)) && (
                 <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px', color: '#dc2626' }}>
-                  Require: 8+ characters, letters, numbers, and special chars.
+                  Require: At least 8 characters, letters, numbers, and special chars.
                 </p>
               )}
             </div>
