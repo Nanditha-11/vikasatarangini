@@ -215,6 +215,51 @@ authRouter.post("/register", async (req, res) => {
     });
 
     await admin.save();
+
+    // Notify Master Admin via Email
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
+          pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw" 
+        }
+      });
+
+      const adminMailOptions = {
+        from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
+        to: "smarnamrutham3@gmail.com",
+        subject: "New Admin Registration - Action Required",
+        html: `
+          <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #0d2866;">New Admin Registration</h2>
+            <p>A new admin has registered and is pending approval:</p>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Username:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${username}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>District:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${district}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Place:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${place}</td></tr>
+            </table>
+            <div style="margin-top: 30px; text-align: center;">
+              <a href="https://vikasatarangini.onrender.com/api/admins/approve-direct/${admin._id}?secret=swarnamrutham_direct_approve" 
+                 style="display: inline-block; padding: 12px 24px; background-color: #059669; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                 APPROVE THIS ADMIN NOW
+              </a>
+            </div>
+            <p style="margin-top: 20px; font-size: 13px; color: #666;">
+              Clicking the button above will immediately approve the user. For more options, please log in to the Master Dashboard.
+            </p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(adminMailOptions);
+      console.log(`[AUTH] Registration notification sent to smarnamrutham3@gmail.com for ${username}`);
+    } catch (mailErr) {
+      console.error("Failed to send registration notification email:", mailErr);
+      // Don't fail the registration if only the email fails
+    }
+
     res.status(201).json({ message: "Registration successful. Please wait for Master Admin approval." });
   } catch (err) {
     res.status(500).json({ error: err.message });

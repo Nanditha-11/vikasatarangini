@@ -30,19 +30,24 @@ const LocationConfig = require("../models/LocationConfig");
 
 // Approve an admin
 adminManagementRouter.post("/approve/:id", async (req, res) => {
-  const id = req.params.id.trim();
-  console.log('[AdminMgmt] Attempting to approve:', id);
+  const idValue = req.params.id.trim();
+  console.log(`[AdminMgmt] Attempting to APPROVE admin: "${idValue}"`);
   try {
-    const admin = await Admin.findByIdAndUpdate(id, { status: "approved" }, { new: true });
+    const admin = await Admin.findOneAndUpdate(
+      { $or: [{ _id: idValue.length === 24 ? idValue : null }, { username: idValue }] },
+      { status: "approved" },
+      { new: true }
+    );
+    
     if (!admin) {
-      console.log('[AdminMgmt] Admin NOT FOUND for approve:', id);
+      console.error(`[AdminMgmt] Admin NOT FOUND for approval: "${idValue}"`);
       return res.status(404).json({ error: "Admin not found" });
     }
 
-    console.log('[AdminMgmt] Successfully approved:', id);
+    console.log(`[AdminMgmt] Successfully APPROVED: ${admin.username} (ID: ${admin._id})`);
     res.json(admin);
   } catch (err) {
-    console.error('[AdminMgmt] ERROR in approve:', err);
+    console.error(`[AdminMgmt] Database ERROR during approval for "${idValue}":`, err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -110,6 +115,48 @@ adminManagementRouter.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error('[AdminMgmt] ERROR in delete:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Direct Approve via Email Link (GET request for simplicity)
+adminManagementRouter.get("/approve-direct/:id", async (req, res) => {
+  const idValue = req.params.id.trim();
+  const { secret } = req.query;
+  console.log(`[AdminMgmt] EMAIL LINK: Attempting to APPROVE admin: "${idValue}"`);
+
+  if (secret !== 'swarnamrutham_direct_approve') {
+    console.error(`[AdminMgmt] EMAIL LINK: FAILED - Invalid secret for "${idValue}"`);
+    return res.status(401).send("<h1>Unauthorized</h1><p>Invalid approval link.</p>");
+  }
+
+  try {
+    const admin = await Admin.findOneAndUpdate(
+      { $or: [{ _id: idValue.length === 24 ? idValue : null }, { username: idValue }] },
+      { status: "approved" },
+      { new: true }
+    );
+
+    if (!admin) {
+      console.error(`[AdminMgmt] EMAIL LINK: Admin NOT FOUND for approval: "${idValue}"`);
+      return res.status(404).send("<h1>Error</h1><p>Admin not found.</p>");
+    }
+
+    console.log(`[AdminMgmt] EMAIL LINK: Successfully APPROVED: ${admin.username} (ID: ${admin._id})`);
+    res.send(`
+      <div style="font-family: sans-serif; text-align: center; padding: 80px 20px;">
+        <div style="font-size: 50px; margin-bottom: 20px;">✅</div>
+        <h1 style="color: #059669; margin: 0;">Access Authorized</h1>
+        <p style="color: #475569; font-size: 1.1em; margin-top: 10px;">
+          Admin <b>${admin.username}</b> has been approved and added to your <b>Authorized Administrators</b> list.
+        </p>
+        <p style="color: #94a3b8; font-size: 0.9em; margin-top: 30px;">
+          You can close this tab now.
+        </p>
+      </div>
+    `);
+  } catch (err) {
+    console.error(`[AdminMgmt] EMAIL LINK: Database ERROR during approval for "${idValue}":`, err);
+    res.status(500).send(`<h1>Error</h1><p>${err.message}</p>`);
   }
 });
 

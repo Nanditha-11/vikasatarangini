@@ -275,14 +275,14 @@ export function LoginPage() {
               </div>
               <div className="field">
                 <label>Confirm Password</label>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
                   <input 
                     className="input" 
                     type={showPassword ? "text" : "password"} 
                     value={confirmPassword} 
                     onChange={(e) => setConfirmPassword(e.target.value)} 
                     required 
-                    style={{ paddingRight: '45px' }}
+                    style={{ paddingRight: '45px', width: '100%', boxSizing: 'border-box' }}
                   />
                   <button
                     type="button"
@@ -394,7 +394,7 @@ export function LoginPage() {
 
                 <div className="field">
                   <label>Password</label>
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', width: '100%' }}>
                     <input
                       className="input"
                       type={showPassword ? "text" : "password"}
@@ -402,7 +402,7 @@ export function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••••"
                       required
-                      style={{ paddingRight: '45px' }}
+                      style={{ paddingRight: '45px', width: '100%', boxSizing: 'border-box' }}
                     />
                     <button
                       type="button"

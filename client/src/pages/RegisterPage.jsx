@@ -164,7 +164,7 @@ export function RegisterPage() {
 
             <div className="field">
               <label>Password</label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
                 <input
                   className="input"
                   type={showPassword ? "text" : "password"}
@@ -173,7 +173,7 @@ export function RegisterPage() {
                   placeholder="Create a password"
                   required
                   autoComplete="new-password"
-                  style={{ paddingRight: '45px' }}
+                  style={{ paddingRight: '45px', width: '100%', boxSizing: 'border-box' }}
                 />
                 <button
                   type="button"
