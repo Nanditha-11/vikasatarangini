@@ -117,7 +117,14 @@ export function RegisterPage() {
               <input
                 className="input"
                 value={typedPlace}
-                onChange={(e) => setTypedPlace(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    setTypedPlace(val.charAt(0).toUpperCase() + val.slice(1));
+                  } else {
+                    setTypedPlace("");
+                  }
+                }}
                 placeholder="Type your village/town name"
                 required
                 disabled={!selectedDistrict}
@@ -165,6 +172,9 @@ export function RegisterPage() {
                 required
                 autoComplete="new-password"
               />
+              <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px' }}>
+                Require: 8+ characters, letters, numbers, and special chars.
+              </p>
             </div>
 
             <div className="field">

@@ -92,12 +92,24 @@ authRouter.post("/forgot-password", async (req, res) => {
   }
 });
 
+function isPasswordComplex(password) {
+  if (password.length < 8) return false;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return hasLetter && hasNumber && hasSpecial;
+}
+
 authRouter.post("/reset-password", async (req, res) => {
   const { email, otp, newPassword } = req.body || {};
   if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
 
   if (activeOTP !== String(otp) || Date.now() > otpExpiry) {
     return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
+
+  if (!isPasswordComplex(newPassword)) {
+    return res.status(400).json({ error: "Password must be at least 8 characters and contain letters, numbers, and special characters." });
   }
 
   // update DB
@@ -128,6 +140,10 @@ authRouter.post("/register", async (req, res) => {
       place = place.charAt(0).toUpperCase() + place.slice(1);
     }
     password = password?.trim();
+
+    if (!isPasswordComplex(password)) {
+      return res.status(400).json({ error: "Password must be at least 8 characters and contain letters, numbers, and special characters." });
+    }
     
     // Check if username already exists
     const existing = await Admin.findOne({ 

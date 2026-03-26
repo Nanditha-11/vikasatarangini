@@ -126,6 +126,12 @@ export function LoginPage() {
   async function onReset(e) {
     e.preventDefault();
     if (newPassword !== confirmPassword) return setError("Passwords don't match");
+    
+    // Check complexity
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      return setError("Password must be at least 8 characters and contain letters, numbers, and special characters.");
+    }
+
     setError("");
     setBusy(true);
     try {
