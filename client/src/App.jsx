@@ -105,6 +105,14 @@ export default function App() {
           </RequireMaster>
         }
       />
+      <Route
+        path="/modify"
+        element={
+          <RequireAuth adminOnly={true}>
+            <ModifyStudentsPage />
+          </RequireAuth>
+        }
+      />
       <Route path="/pay" element={<PaymentPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

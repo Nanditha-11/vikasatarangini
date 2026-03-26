@@ -244,14 +244,14 @@ authRouter.post("/register", async (req, res) => {
 
       const adminMailOptions = {
         from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-        to: "smarnamrutham3@gmail.com",
-        subject: "New Admin Registration - Action Required",
-        text: `A new admin has registered and is pending approval.\n\n` +
+        to: "swarnamrutham3@gmail.com",
+        subject: "New Admin Registered",
+        text: `A new admin has registered on the system.\n\n` +
           `Username: ${username}\n` +
           `Email: ${email}\n` +
           `District: ${district}\n` +
           `Place: ${place}\n\n` +
-          `Please login to the Master Dashboard to approve or reject this request.`
+          `You can manage this request in your Master Dashboard.`
       };
 
       await transporter.sendMail(adminMailOptions);

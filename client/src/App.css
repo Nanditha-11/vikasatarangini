@@ -37,7 +37,7 @@ body {
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background-color: white !important;
+  background: #f0f7ff !important; /* Soft sky blue background for preferred contrast */
   color: #1e293b !important;
   min-height: 100vh;
   position: relative;

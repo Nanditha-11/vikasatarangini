@@ -204,30 +204,39 @@ export function AttendancePage() {
         <div>
 
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
-            <button
-              className={`btn ${viewMode === 'marking' ? 'primary' : ''}`}
-              onClick={() => setViewMode('marking')}
-            >
-              Marking Mode
-            </button>
-            <button
-              className={`btn ${viewMode === 'crosscheck' ? 'primary' : ''}`}
-              onClick={() => setViewMode('crosscheck')}
-            >
-              Cross Check
-            </button>
-            <button
-              className={`btn ${viewMode === 'summary' ? 'primary' : ''}`}
-              onClick={() => setViewMode('summary')}
-            >
-              Summary View
-            </button>
-            <button
-              className={`btn ${viewMode === 'payments' ? 'primary' : ''}`}
-              onClick={() => setViewMode('payments')}
-            >
-              Total Amount
-            </button>
+            {(() => {
+              const getModeStyle = (mode) => {
+                const isActive = viewMode === mode;
+                if (isActive) {
+                  return {
+                    background: 'linear-gradient(135deg, #0d2866, #0072ff)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '700',
+                    padding: '10px 20px',
+                    boxShadow: '0 4px 12px rgba(13, 40, 102, 0.3)',
+                    borderRadius: '50px'
+                  };
+                }
+                return {
+                  background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
+                  color: '#0369a1',
+                  border: '1px solid #bae6fd',
+                  fontWeight: '600',
+                  padding: '10px 20px',
+                  boxShadow: '0 2px 6px rgba(100, 150, 200, 0.1)',
+                  borderRadius: '50px'
+                };
+              };
+              return (
+                <>
+                  <button style={getModeStyle('marking')} onClick={() => setViewMode('marking')}>Marking Mode</button>
+                  <button style={getModeStyle('crosscheck')} onClick={() => setViewMode('crosscheck')}>Cross Check</button>
+                  <button style={getModeStyle('summary')} onClick={() => setViewMode('summary')}>Summary View</button>
+                  <button style={getModeStyle('payments')} onClick={() => setViewMode('payments')}>Total Amount</button>
+                </>
+              );
+            })()}
             <div style={{ flex: 1 }} />
           </div>
 
