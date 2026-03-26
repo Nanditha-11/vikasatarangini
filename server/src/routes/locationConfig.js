@@ -8,16 +8,18 @@ const locationConfigRouter = express.Router();
 locationConfigRouter.get("/", requireAuth, async (req, res) => {
   const { username, role } = req.user;
   let targetUsername = username;
-
-  // Master admin can view config for a specific admin if username is provided
-  if (role === "master" && req.query.username) {
-    targetUsername = req.query.username;
-  }
-
   try {
-    const admin = await Admin.findOne({ 
-      username: { $regex: new RegExp(`^${targetUsername}$`, "i") } 
-    }).lean();
+    let query = { username: { $regex: new RegExp(`^${targetUsername}$`, "i") } };
+
+    if (role === "master") {
+      if (req.query.username) {
+        query = { username: { $regex: new RegExp(`^${req.query.username}$`, "i") } };
+      } else if (req.query.district && req.query.place) {
+        query = { district: req.query.district, place: req.query.place, status: "approved" };
+      }
+    }
+
+    const admin = await Admin.findOne(query).lean();
 
     if (!admin) return res.status(404).json({ error: "Admin not found" });
 

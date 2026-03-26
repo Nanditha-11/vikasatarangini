@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
 
-export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [] }) {
+export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], viewDistrict, viewPlace }) {
   const [showAddManual, setShowAddManual] = useState(false);
   const [newStudent, setNewStudent] = useState({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
   const [successData, setSuccessData] = useState(null);
@@ -9,8 +9,13 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [] }) 
   const [adminProfile, setAdminProfile] = useState(null);
 
   useEffect(() => {
-    // 1. Fetch location defaults
-    apiFetch("/api/location-config")
+    // 1. Fetch location defaults - include district/place for Master Admin
+    let url = "/api/location-config";
+    if (viewDistrict && viewPlace) {
+      url += `?district=${encodeURIComponent(viewDistrict)}&place=${encodeURIComponent(viewPlace)}`;
+    }
+    
+    apiFetch(url)
       .then(data => {
         console.log("[StudentAdmin] Loaded location config:", data);
         setConfig(data);
@@ -24,7 +29,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [] }) 
         setAdminProfile(profile);
       })
       .catch(err => console.error("[StudentAdmin] Failed to load admin profile:", err));
-  }, []);
+  }, [viewDistrict, viewPlace]);
 
   const handleAddManual = async () => {
     if (!newStudent.name || !newStudent.phone) return alert("Name and Phone are required");

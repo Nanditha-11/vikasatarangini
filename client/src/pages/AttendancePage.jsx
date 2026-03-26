@@ -209,6 +209,8 @@ export function AttendancePage() {
             setBusy={setBusy} 
             setError={setError} 
             rows={rows} 
+            viewDistrict={viewDistrict}
+            viewPlace={viewPlace}
           />
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
             {(() => {
