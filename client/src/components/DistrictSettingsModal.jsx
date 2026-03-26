@@ -10,11 +10,8 @@ export function DistrictSettingsModal({ admin, onClose, onRefresh }) {
   });
 
   useEffect(() => {
-    // We need to fetch the config for this specific district/place
-    // But our GET /api/location-config uses the CURRENT user's location.
-    // So we need a master-level endpoint or just use a query param.
-    // For now, I'll update the backend to allow passing district/place for master admins.
-    const url = `/api/location-config?district=${encodeURIComponent(admin.district)}&place=${encodeURIComponent(admin.place)}`;
+    // Fetch the config for this specific admin via their username
+    const url = `/api/location-config?username=${encodeURIComponent(admin.username)}`;
     apiFetch(url).then(setConfig).catch(console.error);
   }, [admin]);
 
@@ -27,8 +24,7 @@ export function DistrictSettingsModal({ admin, onClose, onRefresh }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...config,
-          district: admin.district,
-          place: admin.place
+          username: admin.username
         }),
       });
       alert("Settings saved successfully!");

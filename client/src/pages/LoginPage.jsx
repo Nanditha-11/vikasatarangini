@@ -6,7 +6,6 @@ export function LoginPage() {
   const nav = useNavigate();
   const [view, setView] = useState("login"); // login | forgot | otp | reset
   
-  // Hardcoded districts, but places are dynamic
   const districts = [
     "Main", "Adilabad", "Bhadradri Kothagudem", "Hanumakonda", "Hyderabad", 
     "Jagtial", "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal", 
@@ -50,6 +49,7 @@ export function LoginPage() {
         setSelectedPlace("");
       } catch (err) {
         console.error("Failed to fetch places:", err);
+        setError("Could not load places for this district. The server might be starting up or disconnected.");
         setPlaces([]);
       } finally {
         setLoadingPlaces(false);
@@ -57,6 +57,11 @@ export function LoginPage() {
     }
     fetchPlaces();
   }, [selectedDistrict]);
+
+  // Clear error when switching views
+  useEffect(() => {
+    setError("");
+  }, [view]);
 
   async function onLogin(e) {
     e.preventDefault();
@@ -138,7 +143,7 @@ export function LoginPage() {
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, newPassword }),
+        body: JSON.stringify({ email, newPassword, otp: otp.join("") }),
       });
       setView("login");
       alert("Password reset successful! Please login.");
@@ -331,7 +336,7 @@ export function LoginPage() {
                     justifyContent: 'center'
                   }}
                 >
-                  {busy ? "Signing in..." : "Login"}
+                  {busy ? "Logging in..." : "Login"}
                 </button>
               </>
             )}

@@ -4,17 +4,34 @@ import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAttendance } from "../hooks/useAttendance";
 import { AttendanceHeader } from "../components/AttendanceHeader";
-import { StudentAdmin } from "../components/StudentAdmin";
 import { StudentTable } from "../components/StudentTable";
 import { StudentHistoryLog } from "../components/StudentHistoryLog";
 import { WhatsAppEditor } from "../components/WhatsAppEditor";
 import { MarkingModal } from "../components/MarkingModal";
-import { ModifyModal } from "../components/ModifyModal";
 import { toIsoDate, todayParts } from "../lib/date";
 
 
+const DISTRICTS = [
+  "Main", "Adilabad", "Bhadradri Kothagudem", "Hanumakonda", "Hyderabad",
+  "Jagtial", "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal",
+  "Kamareddy", "Karimnagar", "Khammam", "Kumuram Bheem", "Mahabubabad",
+  "Mahabubnagar", "Mancherial", "Medak", "Medchal–Malkajgiri", "Mulugu",
+  "Nagarkurnool", "Nalgonda", "Narayanpet", "Nirmal", "Nizamabad",
+  "Peddapalli", "Rajanna Sircilla", "Rangareddy", "Sangareddy", "Siddipet",
+  "Suryapet", "Vikarabad", "Wanaparthy", "Warangal", "Yadadri Bhuvanagiri"
+];
+
 export function AttendancePage() {
   const { date: paramDate } = useParams();
+
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isMaster = user?.role === "master";
+
+  const [viewDistrict, setViewDistrict] = useState(isMaster ? "Main" : "");
+  const [viewPlace, setViewPlace] = useState(isMaster ? "Main" : "");
+  const [places, setPlaces] = useState([]);
+
   const {
     date, setDate,
     rows, setRows,
@@ -24,16 +41,20 @@ export function AttendancePage() {
     message, setMessage,
     load,
     save
-  } = useAttendance(paramDate);
+  } = useAttendance(paramDate, viewDistrict, viewPlace);
 
   const [filter, setFilter] = useState("");
   const [viewMode, setViewMode] = useState("marking"); // marking | crosscheck | summary
   const [historyStudent, setHistoryStudent] = useState(null);
   const [markingStudent, setMarkingStudent] = useState(null);
-  const [modifyingStudent, setModifyingStudent] = useState(null);
 
-  const userStr = localStorage.getItem("user");
-  const user = userStr ? JSON.parse(userStr) : null;
+  useEffect(() => {
+    if (isMaster && viewDistrict) {
+      apiFetch(`/api/auth/places/${viewDistrict}`)
+        .then(setPlaces)
+        .catch(err => console.error("Failed to fetch places for dashboard:", err));
+    }
+  }, [isMaster, viewDistrict]);
 
   const toggleStudent = (slNo, paymentMethod = "Cash", quantity = 1, forceUpdate = false) => {
     const nextRows = rows.map(r => {
@@ -41,9 +62,9 @@ export function AttendancePage() {
         const isCurrentlyPresent = !!r.present;
         const nextPresent = forceUpdate ? true : !isCurrentlyPresent;
         const nextQuantity = nextPresent ? (quantity || r.quantity || 1) : 0;
-        return { 
-          ...r, 
-          present: nextPresent, 
+        return {
+          ...r,
+          present: nextPresent,
           paymentMethod: nextPresent ? (paymentMethod || r.paymentMethod || "Cash") : "Cash",
           quantity: nextQuantity
         };
@@ -56,17 +77,17 @@ export function AttendancePage() {
 
   const handleConfirmMarking = async ({ qty, payment }) => {
     if (!markingStudent) return;
-    
+
     // 1. Update state
     const slNo = markingStudent.slNo;
     const studentPhone = markingStudent.phone;
     const studentName = markingStudent.name;
-    
+
     toggleStudent(slNo, payment, qty, true);
-    
+
     // 2. Close modal
     setMarkingStudent(null);
-    
+
     // 3. Prepare message
     let baseMsg = message || "Thank you for attending the session!";
     if (!baseMsg.includes("Jai Srimannarayana")) {
@@ -74,59 +95,30 @@ export function AttendancePage() {
     }
 
     const amount = qty * 70;
-    
+
     // Send ONLY the exact message displayed in the sidebar editor
     const finalMsg = baseMsg;
-    
+
     const text = encodeURIComponent(finalMsg);
-    const phone = studentPhone.replace(/\D/g, ''); 
+    const phone = studentPhone.replace(/\D/g, '');
     const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
-    
+
     console.log(`[Auto-WhatsApp] Sending to ${fullPhone}: ${finalMsg}`);
-    window.open(`https://api.whatsapp.com/send?phone=${fullPhone}&text=${text}`, "_blank");
+    
+    // Only open if we have a phone number
+    if (fullPhone && fullPhone.length >= 10) {
+      window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+    } else {
+      alert("Invalid student phone number. Message not sent.");
+    }
   };
 
   const updateQuantity = (slNo, newQty) => {
-    const nextRows = rows.map(r => 
+    const nextRows = rows.map(r =>
       r.slNo === slNo ? { ...r, quantity: Number(newQty) } : r
     );
     setRows(nextRows);
     save(false, nextRows).catch(console.error);
-  };
-
-  const handleConfirmModification = async ({ qty, remark }) => {
-    if (!modifyingStudent) return;
-    
-    // 1. Update state
-    const slNo = modifyingStudent.slNo;
-    const nextRows = rows.map(r => 
-      r.slNo === slNo ? { ...r, quantity: qty, remark: remark } : r
-    );
-    setRows(nextRows);
-    
-    // 2. Save to DB
-    await save(false, nextRows);
-    
-    // 3. Close modal
-    setModifyingStudent(null);
-  };
-
-  const deleteStudent = async (slNo) => {
-    const pass = prompt("Enter Admin Password to delete student:");
-    if (!pass) return;
-    try {
-      setBusy(true);
-      await apiFetch(`/api/students/${slNo}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pass })
-      });
-      load(date);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setBusy(false);
-    }
   };
 
   const handleDownloadPresent = () => {
@@ -156,7 +148,7 @@ export function AttendancePage() {
     let cashQty = 0;
     let onlineQty = 0;
     let freeQty = 0;
-    
+
     rows.forEach(r => {
       if (r.present) {
         const qty = Number(r.quantity) || 0;
@@ -191,47 +183,46 @@ export function AttendancePage() {
 
   return (
     <Layout>
-      <AttendanceHeader 
-        date={date} 
-        setDate={setDate} 
-        info={info} 
+      <AttendanceHeader
+        date={date}
+        setDate={setDate}
+        info={info}
         presentCount={presentCount}
         absentCount={absentCount}
         totalCount={rows.length}
         soldCount={totalSold}
         user={user}
+        viewDistrict={viewDistrict}
+        viewPlace={viewPlace}
+        setViewDistrict={setViewDistrict}
+        setViewPlace={setViewPlace}
+        districts={DISTRICTS}
+        places={places}
       />
 
       <div className="grid dashboard-grid" style={{ gap: '24px' }}>
         <div>
-          <StudentAdmin 
-            onRefresh={() => load(date)} 
-            busy={busy} 
-            rows={rows}
-            setBusy={setBusy} 
-            setError={setError} 
-          />
 
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
-            <button 
+            <button
               className={`btn ${viewMode === 'marking' ? 'primary' : ''}`}
               onClick={() => setViewMode('marking')}
             >
               Marking Mode
             </button>
-            <button 
+            <button
               className={`btn ${viewMode === 'crosscheck' ? 'primary' : ''}`}
               onClick={() => setViewMode('crosscheck')}
             >
               Cross Check
             </button>
-            <button 
+            <button
               className={`btn ${viewMode === 'summary' ? 'primary' : ''}`}
               onClick={() => setViewMode('summary')}
             >
               Summary View
             </button>
-            <button 
+            <button
               className={`btn ${viewMode === 'payments' ? 'primary' : ''}`}
               onClick={() => setViewMode('payments')}
             >
@@ -275,9 +266,9 @@ export function AttendancePage() {
           ) : viewMode === 'summary' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="row" style={{ justifyContent: 'flex-end', gap: '10px' }}>
-                <button 
-                  className="btn primary" 
-                  style={{ background: '#10b981', borderColor: '#10b981' }} 
+                <button
+                  className="btn primary"
+                  style={{ background: '#10b981', borderColor: '#10b981' }}
                   onClick={() => {
                     const baseUrl = window.location.origin === "http://localhost:5173" ? "http://localhost:5050" : "";
                     window.open(`${baseUrl}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
@@ -326,15 +317,13 @@ export function AttendancePage() {
               </div>
             </div>
           ) : (
-            <StudentTable 
-              rows={rows} 
-              filter={filter} 
-              setFilter={setFilter} 
-              onToggle={toggleStudent} 
+            <StudentTable
+              rows={rows}
+              filter={filter}
+              setFilter={setFilter}
+              onToggle={toggleStudent}
               onMarkClick={setMarkingStudent}
-              onModifyClick={setModifyingStudent}
               onUpdateQuantity={updateQuantity}
-              onDelete={deleteStudent}
               onViewHistory={setHistoryStudent}
               busy={busy}
               viewMode={viewMode}
@@ -343,11 +332,11 @@ export function AttendancePage() {
         </div>
 
         <div className="sidebar">
-          <WhatsAppEditor 
-            message={message} 
-            setMessage={setMessage} 
-            onSave={() => save(true)} 
-            busy={busy} 
+          <WhatsAppEditor
+            message={message}
+            setMessage={setMessage}
+            onSave={() => save(true)}
+            busy={busy}
           />
 
           {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
@@ -355,25 +344,17 @@ export function AttendancePage() {
       </div>
 
       {historyStudent && (
-        <StudentHistoryLog 
-          student={historyStudent} 
-          onClose={() => setHistoryStudent(null)} 
+        <StudentHistoryLog
+          student={historyStudent}
+          onClose={() => setHistoryStudent(null)}
         />
       )}
       {markingStudent && (
-        <MarkingModal 
-          student={markingStudent} 
-          isOpen={!!markingStudent} 
-          onClose={() => setMarkingStudent(null)} 
+        <MarkingModal
+          student={markingStudent}
+          isOpen={!!markingStudent}
+          onClose={() => setMarkingStudent(null)}
           onConfirm={handleConfirmMarking}
-        />
-      )}
-      {modifyingStudent && (
-        <ModifyModal
-          student={modifyingStudent}
-          isOpen={!!modifyingStudent}
-          onClose={() => setModifyingStudent(null)}
-          onConfirm={handleConfirmModification}
         />
       )}
     </Layout>

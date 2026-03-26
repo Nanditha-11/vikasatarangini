@@ -1,6 +1,6 @@
 const express = require("express");
 const nodemailer = require("nodemailer");
-const { signAdminToken } = require("../lib/auth");
+const { signAdminToken, requireAuth } = require("../lib/auth");
 const Admin = require("../models/Admin");
 
 const authRouter = express.Router();
@@ -9,11 +9,26 @@ const authRouter = express.Router();
 let activeOTP = null;
 let otpExpiry = null;
 
+authRouter.get("/districts", async (req, res) => {
+  try {
+    const districts = await Admin.distinct("district", { status: "approved" });
+    // Sort alphabetically
+    districts.sort();
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 authRouter.get("/places/:district", async (req, res) => {
   try {
     const { district } = req.params;
     // Get unique approved places for this district
-    const places = await Admin.distinct("place", { district });
+    const places = await Admin.distinct("place", { 
+      district: { $regex: new RegExp(`^${district}$`, "i") },
+      status: "approved"
+    });
+    places.sort();
     res.json(places);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -52,16 +67,35 @@ authRouter.post("/login", async (req, res) => {
       username: displayUsername,
       role: admin.role,
       district: admin.district,
-      place: admin.place
+      place: admin.place,
+      whatsappLink: admin.whatsappLink
     }
   });
 });
 
+authRouter.get("/me", requireAuth, async (req, res) => {
+  try {
+    const admin = await Admin.findOne({ username: req.user.username }).lean();
+    if (!admin) return res.status(404).json({ error: "Admin not found" });
+    
+    // Don't send password
+    const { password, ...safeData } = admin;
+    res.json(safeData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 authRouter.post("/forgot-password", async (req, res) => {
   const { email } = req.body || {};
-  const admin = await Admin.findOne({ email });
+  const admin = await Admin.findOne({ 
+    $or: [
+      { email: { $regex: new RegExp(`^${email}$`, "i") } },
+      { username: { $regex: new RegExp(`^${email}$`, "i") } }
+    ]
+  });
   if (!admin) {
-    return res.status(400).json({ error: "Invalid admin email" });
+    return res.status(400).json({ error: "Invalid admin email or username" });
   }
 
   const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
@@ -71,17 +105,19 @@ authRouter.post("/forgot-password", async (req, res) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.GMAIL_USER || "vikasatarangini4@gmail.com",
+      user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
       pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw" 
     }
   });
 
   const mailOptions = {
-    from: process.env.GMAIL_USER || "vikasatarangini4@gmail.com",
+    from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
     to: email, 
     subject: "Admin Password Reset - OTP",
     text: `Your 4-digit OTP for resetting the password is: ${activeOTP}. It will expire in 10 minutes.`
   };
+
+  console.log(`[AUTH] Sending mail FROM: ${process.env.GMAIL_USER || "swarnamrutham3@gmail.com"}`);
 
   try {
     await transporter.sendMail(mailOptions);
@@ -100,6 +136,14 @@ function isPasswordComplex(password) {
   return hasLetter && hasNumber && hasSpecial;
 }
 
+authRouter.post("/verify-otp", async (req, res) => {
+  const { otp } = req.body || {};
+  if (!otp || activeOTP !== String(otp) || Date.now() > otpExpiry) {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
+  res.json({ ok: true });
+});
+
 authRouter.post("/reset-password", async (req, res) => {
   const { email, otp, newPassword } = req.body || {};
   if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
@@ -114,7 +158,13 @@ authRouter.post("/reset-password", async (req, res) => {
 
   // update DB
   try {
-    const result = await Admin.updateOne({ email }, { $set: { password: newPassword } });
+    const query = { 
+      $or: [
+        { email: { $regex: new RegExp(`^${email}$`, "i") } },
+        { username: { $regex: new RegExp(`^${email}$`, "i") } }
+      ]
+    };
+    const result = await Admin.updateOne(query, { $set: { password: newPassword } });
     if (result.matchedCount === 0) {
       return res.status(404).json({ error: "Admin account not found" });
     }

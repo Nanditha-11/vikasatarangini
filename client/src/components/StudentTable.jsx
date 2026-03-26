@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode }) {
+export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode, deletingSlNo, setDeletingSlNo, deletePass, setDeletePass }) {
   const navigate = useNavigate();
   const q = filter.trim().toLowerCase();
 
@@ -27,15 +27,7 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
     <div className="card" style={{ marginTop: '24px' }}>
       <div className="row" style={{ marginBottom: '16px', justifyContent: 'center' }}>
         <div className="row" style={{ flex: 1, maxWidth: '800px', position: 'relative' }}>
-          {viewMode === "marking" && (
-            <button 
-              className="btn primary" 
-              onClick={handleModifyClick}
-              style={{ marginRight: '15px', whiteSpace: 'nowrap', padding: '15px 30px', fontSize: '1.1em', fontWeight: 'bold' }}
-            >
-              Modify
-            </button>
-          )}
+          
           <input
             className="input"
             value={filter}
@@ -91,16 +83,16 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                       <b>Phone Number:</b> {r.phone}
                     </p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <button className="btn primary" style={{ display: 'block', width: '100%', marginBottom: '8px' }} onClick={() => onViewHistory(r)}>
-                      View Full History
-                    </button>
-                    {!r.present && (
-                      <button className="btn" style={{ borderColor: '#059669', color: '#059669', width: '100%' }} onClick={() => onMarkClick(r)}>
-                          Mark Present
+                    <div style={{ textAlign: 'right' }}>
+                      <button className="btn primary" style={{ display: 'block', width: '100%', marginBottom: '8px' }} onClick={() => onViewHistory(r)}>
+                        View Full History
                       </button>
-                    )}
-                  </div>
+                      {!r.present && (
+                        <button className="btn" style={{ borderColor: '#059669', color: '#059669', width: '100%', marginBottom: '8px' }} onClick={() => onMarkClick(r)}>
+                            Mark Present
+                        </button>
+                      )}
+                    </div>
                 </div>
               </div>
             ))}

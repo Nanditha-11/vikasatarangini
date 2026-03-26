@@ -68,14 +68,6 @@ export default function App() {
         }
       />
       <Route
-        path="/modify"
-        element={
-          <RequireAuth adminOnly={true}>
-            <ModifyStudentsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
         path="/:date?"
         element={
           <RequireAuth adminOnly={true}>

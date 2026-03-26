@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { daysInMonth, toIsoDate, todayParts } from "../lib/date";
 
-export function AttendanceHeader({ date, setDate, info, presentCount, absentCount, totalCount, soldCount, user }) {
+export function AttendanceHeader({ 
+  date, setDate, info, presentCount, absentCount, totalCount, soldCount, user,
+  viewDistrict, viewPlace, setViewDistrict, setViewPlace, districts, places
+}) {
   const [yStr, mStr, dStr] = date.split("-");
   const y = Number(yStr);
   const m = Number(mStr);
@@ -73,10 +76,51 @@ export function AttendanceHeader({ date, setDate, info, presentCount, absentCoun
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {user ? (
             <>
-              <span style={{ fontSize: '1.1em', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{user.district}</span>
-              <h2 style={{ margin: 0, fontSize: '2.2em', fontStyle: 'italic', color: '#0d2866', lineHeight: '1.1' }}>
-                {user.place}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ background: 'rgba(13, 40, 102, 0.1)', color: '#0d2866', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8em', fontWeight: 'bold' }}>
+                  ADMIN: {user.username}
+                </span>
+                {user.role === 'master' && (
+                  <span style={{ background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8em', fontWeight: 'bold' }}>MASTER</span>
+                )}
+              </div>
+
+              {user.role === 'master' ? (
+                <div className="row" style={{ gap: '12px', marginTop: '4px' }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <select 
+                      className="input" 
+                      style={{ padding: '6px 12px', fontSize: '0.9em', minWidth: '150px' }}
+                      value={viewDistrict} 
+                      onChange={e => setViewDistrict(e.target.value)}
+                    >
+                      {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <select 
+                      className="input" 
+                      style={{ padding: '6px 12px', fontSize: '0.9em', minWidth: '150px' }}
+                      value={viewPlace} 
+                      onChange={e => setViewPlace(e.target.value)}
+                      disabled={places.length === 0}
+                    >
+                      <option value="">-- Select Place --</option>
+                      {places.map(p => {
+                        const cap = p.charAt(0).toUpperCase() + p.slice(1);
+                        return <option key={p} value={p}>{cap}</option>;
+                      })}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span style={{ fontSize: '1.1em', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{user.district}</span>
+                  <h2 style={{ margin: 0, fontSize: '2.2em', fontStyle: 'italic', color: '#0d2866', lineHeight: '1.1' }}>
+                    {user.place}
+                  </h2>
+                </>
+              )}
             </>
           ) : (
             <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Home</h2>

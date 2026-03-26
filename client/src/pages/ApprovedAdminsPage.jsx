@@ -7,6 +7,8 @@ const ApprovedAdminsPage = () => {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processingId, setProcessingId] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
   const [selectedAdminForConfig, setSelectedAdminForConfig] = useState(null);
   const nav = useNavigate();
 
@@ -16,8 +18,14 @@ const ApprovedAdminsPage = () => {
 
   const fetchAdmins = async () => {
     try {
+      setLoading(true);
       const data = await apiFetch('/api/admins/all');
-      setAdmins(data.filter(a => a.status === 'approved' && a.role === 'admin'));
+      if (Array.isArray(data)) {
+        setAdmins(data.filter(a => a.status === 'approved' && a.role === 'admin'));
+      } else {
+        console.error('Expected array from /api/admins/all but got:', data);
+        setError('Unexpected data format from server');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -26,12 +34,25 @@ const ApprovedAdminsPage = () => {
   };
 
   const removeAdmin = async (id) => {
-    if (!window.confirm('Are you sure you want to remove access for this admin? They will be moved to the Denied Requests list.')) return;
+    if (confirmingId !== id) {
+      setConfirmingId(id);
+      return;
+    }
+
+    setConfirmingId(null);
+    setProcessingId(id);
     try {
-      await apiFetch(`/api/admins/reject/${id}`, { method: 'POST' });
-      fetchAdmins();
+      console.log('Sending removal request for:', id);
+      const res = await apiFetch(`/api/admins/reject/${id}`, { method: 'POST' });
+      console.log('Removal response:', res);
+      // Optimistic locally
+      setAdmins(prev => prev.filter(a => a._id !== id));
+      alert('Admin removed and moved to Denied Requests.');
     } catch (err) {
+      console.error('Removal failed:', err);
       alert('Failed to remove access: ' + err.message);
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -45,7 +66,7 @@ const ApprovedAdminsPage = () => {
           <div>
             <h2 style={{ margin: 0, fontSize: '24px' }}>Authorized Administrators</h2>
           </div>
-          <button 
+          <button
             onClick={() => nav("/master-dashboard")}
             className="btn"
             style={{ padding: '12px 24px' }}
@@ -53,7 +74,7 @@ const ApprovedAdminsPage = () => {
             <span>⬅️</span> Back to Requests
           </button>
         </div>
-        
+
         <div className="tableWrap">
           <table>
             <thead>
@@ -74,19 +95,20 @@ const ApprovedAdminsPage = () => {
                   <td className="muted" style={{ fontSize: '16px' }}>{admin.email}</td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                      <button 
+                      <button
                         onClick={() => setSelectedAdminForConfig(admin)}
                         className="btn primary"
-                        style={{ padding: '8px 18px', fontSize: '14px', fontWeight: '700' }}
+                        style={{ padding: '8px 12px', fontSize: '13px' }}
                       >
                         ⚙️ Settings
                       </button>
-                      <button 
-                        onClick={() => removeAdmin(admin._id)}
+                      <button
+                        disabled={processingId === admin._id}
+                        onClick={() => setConfirmingId(admin._id)}
                         className="btn danger"
-                        style={{ padding: '8px 18px', fontSize: '14px', fontWeight: '700' }}
+                        style={{ padding: '8px 12px', fontSize: '13px', fontWeight: '700', opacity: processingId === admin._id ? 0.5 : 1 }}
                       >
-                        🗑️ Remove
+                        {processingId === admin._id ? '⏳...' : '🗑️ Remove Access'}
                       </button>
                     </div>
                   </td>
@@ -105,10 +127,57 @@ const ApprovedAdminsPage = () => {
       </div>
 
       {selectedAdminForConfig && (
-        <DistrictSettingsModal 
-          admin={selectedAdminForConfig} 
-          onClose={() => setSelectedAdminForConfig(null)} 
+        <DistrictSettingsModal
+          admin={selectedAdminForConfig}
+          onClose={() => setSelectedAdminForConfig(null)}
         />
+      )}
+
+      {confirmingId && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{ 
+            maxWidth: '400px', 
+            width: '90%', 
+            textAlign: 'center', 
+            padding: '40px 30px', 
+            background: '#eff6ff',
+            boxShadow: '0 25px 50px -12px rgba(30, 64, 175, 0.15)',
+            border: '2px solid #bfdbfe',
+            borderRadius: '24px'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '20px' }}>⚠️</div>
+            <h3 style={{ margin: '0 0 10px', fontSize: '22px', color: '#1e293b' }}>Remove Access?</h3>
+            <p className="muted" style={{ marginBottom: '25px', fontSize: '15px' }}>
+              Are you sure you want to remove access for <b>{admins.find(a => a._id === confirmingId)?.username}</b>? 
+              They will be moved to the Denied Requests list.
+            </p>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button 
+                onClick={() => removeAdmin(confirmingId)}
+                className="btn"
+                style={{ flex: 1, padding: '14px', fontWeight: 'bold', background: '#e11d48', color: 'white', borderRadius: '12px', border: 'none' }}
+              >
+                Remove Access
+              </button>
+              <button 
+                onClick={() => setConfirmingId(null)}
+                className="btn"
+                style={{ flex: 1, padding: '14px', background: '#e2e8f0', border: '2px solid #cbd5e1', color: '#1e293b', fontWeight: 'bold', borderRadius: '12px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -39,24 +39,6 @@ adminManagementRouter.post("/approve/:id", async (req, res) => {
       return res.status(404).json({ error: "Admin not found" });
     }
 
-    // Automatically create/update LocationConfig with the provided WhatsApp link
-    if (admin.district && admin.place) {
-      await LocationConfig.findOneAndUpdate(
-        { district: admin.district, place: admin.place },
-        { 
-          $set: { 
-            district: admin.district, 
-            place: admin.place, 
-            whatsappLink: admin.whatsappLink || "",
-            welcomeMessage: "Jai Srimannarayana! Thank you for attending the session today.",
-            inviteTemplate: `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`
-          } 
-        },
-        { upsert: true }
-      );
-      console.log(`[AdminMgmt] Initialized LocationConfig for ${admin.district} / ${admin.place}`);
-    }
-
     console.log('[AdminMgmt] Successfully approved:', id);
     res.json(admin);
   } catch (err) {
@@ -70,8 +52,12 @@ adminManagementRouter.post("/reject/:id", async (req, res) => {
   const id = req.params.id.trim();
   console.log('[AdminMgmt] Attempting to reject:', id);
   try {
-    // Also try simple UpdateOne if findByIdAndUpdate fails
-    const admin = await Admin.findByIdAndUpdate(id, { status: "rejected" }, { new: true });
+    // Support both ID and Username for flexibility
+    const admin = await Admin.findOneAndUpdate(
+      { $or: [{ _id: id.length === 24 ? id : null }, { username: id }] },
+      { status: "rejected" },
+      { new: true }
+    );
     if (!admin) {
       console.log('[AdminMgmt] Admin NOT FOUND for reject:', id);
       return res.status(404).json({ error: "Admin not found" });
@@ -111,7 +97,10 @@ adminManagementRouter.delete("/:id", async (req, res) => {
   }
 
   try {
-    const admin = await Admin.findByIdAndDelete(id);
+    // Support both ID and Username for deletion
+    const admin = await Admin.findOneAndDelete({
+      $or: [{ _id: id.length === 24 ? id : null }, { username: id }]
+    });
     if (!admin) {
       console.log('[AdminMgmt] Admin NOT FOUND for delete:', id);
       return res.status(404).json({ error: "Admin not found" });

@@ -172,22 +172,21 @@ export function RegisterPage() {
                 required
                 autoComplete="new-password"
               />
-              <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px' }}>
-                Require: 8+ characters, letters, numbers, and special chars.
-              </p>
+              {formData.password && !(/^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(formData.password)) && (
+                <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px', color: '#dc2626' }}>
+                  Require: 8+ characters, letters, numbers, and special chars.
+                </p>
+              )}
             </div>
 
             <div className="field">
-              <label>WhatsApp Group Link</label>
+              <label>WhatsApp Group Link (Optional)</label>
               <input
                 className="input"
                 value={formData.whatsappLink || ""}
                 onChange={(e) => setFormData({...formData, whatsappLink: e.target.value})}
                 placeholder="https://chat.whatsapp.com/..."
               />
-              <p className="muted" style={{ fontSize: '0.85em', marginTop: '5px' }}>
-                Optional: Provide the WhatsApp group link for your district.
-              </p>
             </div>
 
             <button 

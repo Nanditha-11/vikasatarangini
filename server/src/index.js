@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const os = require("os");
+const path = require("path");
 
 const { connectDb } = require("./lib/db");
 const { authRouter } = require("./routes/auth");
@@ -13,8 +15,6 @@ const Admin = require("./models/Admin");
 dotenv.config();
 
 const app = express();
-
-const os = require("os");
 
 const getLocalIp = () => {
   const interfaces = os.networkInterfaces();
@@ -30,15 +30,13 @@ const getLocalIp = () => {
 
 app.use(
   cors({
-    origin: true, // Allow all origins to make it easier to access across devices
+    origin: true,
     credentials: true,
   })
 );
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-const path = require("path");
 
 app.use("/api/auth", authRouter);
 app.use("/api/students", studentsRouter);
@@ -50,18 +48,40 @@ app.use("/api/location-config", locationConfigRouter);
 const clientPath = path.join(__dirname, "../../client/dist");
 app.use(express.static(clientPath));
 
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
+// The "catchall" handler
 app.get("*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
 
-const port = Number(process.env.PORT || 5000);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("[Global Error]", err);
+  res.status(500).json({ error: "INTERNAL_SERVER_ERROR: " + (err.message || "Unknown Error") });
+});
 
-connectDb()
-  .then(async () => {
-    // Function to ensure an admin account exists
-    // Function to ensure an admin account exists
+process.on('unhandledRejection', (err) => {
+  console.error('[Unhandled Rejection]', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]', err);
+});
+
+const port = Number(process.env.PORT || 5000);
+const localIp = getLocalIp();
+
+// Start Server immediately
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server running on:`);
+  console.log(`  - Local:   http://localhost:${port}`);
+  console.log(`  - Network: http://${localIp}:${port}`);
+});
+
+// Background DB Connection & Initialization
+async function initialize() {
+  try {
+    await connectDb();
+    
     const ensureAdmin = async (adminData) => {
       try {
         await Admin.updateOne(
@@ -70,48 +90,36 @@ connectDb()
           { upsert: true }
         );
       } catch (err) {
-        if (err.code === 11000) {
-          // Duplicate key error, likely already exists (race condition)
-          console.log(`Admin account ${adminData.username} already exists or was created simultaneously.`);
-        } else {
-          throw err;
-        }
+        if (err.code !== 11000) throw err;
       }
     };
 
-    // Ensure the Master Admin exists (Automatically approved)
     await ensureAdmin({
-      username: "Admin", 
-      password: "swarnamrutham", 
-      email: "vikasatarangini4@gmail.com",
+      username: "Admin",
+      password: "swarnamrutham",
+      email: "swarnamrutham3@gmail.com",
       district: "Main",
       place: "Main",
+      whatsappLink: "",
       status: "approved",
       role: "master"
     });
 
-    // Ensure vikasatarangini admin exists (Pending until masteradmin approves)
     await ensureAdmin({
-      username: "vikasatarangini", 
+      username: "vikasatarangini",
       password: "jeeyarswamy",
       email: "vikasatarangini4@gmail.com",
       district: "Karimnagar",
       place: "Huzurabad",
+      whatsappLink: "",
       status: "approved",
       role: "admin"
     });
 
-    const localIp = getLocalIp();
-    app.listen(port, "0.0.0.0", () => {
-      // eslint-disable-next-line no-console
-      console.log(`Server running on:`);
-      console.log(`  - Local:   http://localhost:${port}`);
-      console.log(`  - Network: http://${localIp}:${port}`);
-    });
-  })
-  .catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error("Failed to start server:", err);
-    process.exit(1);
-  });
+    console.log("Database initialized successfully");
+  } catch (err) {
+    console.error("Initialization failed:", err);
+  }
+}
 
+initialize();

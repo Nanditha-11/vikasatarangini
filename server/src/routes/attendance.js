@@ -3,12 +3,14 @@ const dayjs = require("dayjs");
 const { z } = require("zod");
 
 const { requireAuth } = require("../lib/auth");
+const { tenantMiddleware } = require("../lib/tenantMiddleware");
 const { buildAttendanceWorkbook } = require("../lib/excel");
-const Attendance = require("../models/Attendance");
-
-const Student = require("../models/Student");
+const Admin = require("../models/Admin");
 
 const attendanceRouter = express.Router();
+
+// Apply tenant middleware to ALL routes in this router
+attendanceRouter.use(requireAuth, tenantMiddleware);
 
 function normalizeDateParam(dateStr) {
   const d = dayjs(dateStr, ["YYYY-MM-DD", "YYYY/M/D", "YYYY/MM/DD", "YYYY-M-D"], true);
@@ -16,7 +18,8 @@ function normalizeDateParam(dateStr) {
   return d.format("YYYY-MM-DD");
 }
 
-attendanceRouter.get("/:date", requireAuth, async (req, res) => {
+attendanceRouter.get("/:date", async (req, res) => {
+  const { Student, Attendance } = req.tenantModels;
   const { username } = req.user;
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
@@ -24,12 +27,11 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
   const startOfDay = dayjs(date).startOf('day').toDate();
   const endOfDay = dayjs(date).endOf('day').toDate();
 
-  const query = req.user.role === "master" ? {} : { createdBy: username };
-
+  // In multi-db, we don't need to filter by createdBy as the DB is already isolated
   const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
-    Student.find(query).lean(),
-    Attendance.findOne({ date, ...query }).lean(),
-    Student.find({ ...query, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+    Student.find({}).lean(),
+    Attendance.findOne({ date }).lean(),
+    Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
   ]);
 
   const presentMap = new Map(
@@ -49,8 +51,7 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
     }));
 
   const previousAttendance = await Attendance.findOne({ 
-    date: { $lt: date },
-    ...query 
+    date: { $lt: date }
   }).sort({ date: -1 }).lean();
 
   let previousRemainingStock = 0;
@@ -75,12 +76,16 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
   const present = withStatus.filter((s) => s.present);
   const absent = withStatus.filter((s) => !s.present);
 
+  // Admin remains on the main DB connection
+  const admin = await Admin.findOne({ username }).lean();
+  const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
+
   res.json({
     date,
     total: students.length,
     presentCount: present.length,
     absentCount: absent.length,
-    message: attendance?.message || "",
+    message: attendance?.message || defaultMessage,
     openingStock: attendance?.openingStock || 0,
     previousOpeningStock,
     previousSoldStock,
@@ -93,13 +98,10 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
   });
 });
 
-attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
-  const { district, place, username } = req.user;
+attendanceRouter.post("/:date/save", async (req, res) => {
+  const { Student, Attendance } = req.tenantModels;
+  const { district, place } = req.user;
   
-  if (!username) {
-    return res.status(401).json({ error: "Session expired or invalid. Please logout and login again." });
-  }
-
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 
@@ -116,15 +118,14 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const query = { createdBy: username };
-  const allStudents = await Student.find(query).lean();
+  const allStudents = await Student.find({}).lean();
   const presentSlNos = new Set(parsed.data.presentStudents.map(p => p.slNo));
   const absentStudents = allStudents
     .filter(s => !presentSlNos.has(s.slNo))
     .map(s => ({ slNo: s.slNo, name: s.name }));
 
   await Attendance.updateOne(
-    { date, createdBy: username },
+    { date },
     { $set: { 
       date, 
       presentStudents: parsed.data.presentStudents, 
@@ -132,8 +133,7 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
       message: parsed.data.message,
       openingStock: parsed.data.openingStock,
       district,
-      place,
-      createdBy: username
+      place
     } },
     { upsert: true }
   );
@@ -141,13 +141,12 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
-  const { username } = req.user;
-  const query = req.user.role === "master" ? {} : { createdBy: username };
+attendanceRouter.get("/list/history", async (req, res) => {
+  const { Student, Attendance } = req.tenantModels;
   try {
     const [allAttendance, totalStudents] = await Promise.all([
-      Attendance.find(query).sort({ date: -1 }).lean(),
-      Student.countDocuments(query)
+      Attendance.find({}).sort({ date: -1 }).lean(),
+      Student.countDocuments({})
     ]);
 
     const history = allAttendance.map(att => {
@@ -186,9 +185,8 @@ attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
   }
 });
 
-attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
-  const { username } = req.user;
-  const query = req.user.role === "master" ? {} : { createdBy: username };
+attendanceRouter.get("/:date/download", async (req, res) => {
+  const { Student, Attendance } = req.tenantModels;
   try {
     const date = normalizeDateParam(req.params.date);
     if (!date) return res.status(400).json({ error: "Invalid date" });
@@ -197,9 +195,9 @@ attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
     const endOfDay = dayjs(date).endOf('day').toDate();
 
     const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
-      Student.find(query).lean(),
-      Attendance.findOne({ date, ...query }).lean(),
-      Student.find({ ...query, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+      Student.find({}).lean(),
+      Attendance.findOne({ date }).lean(),
+      Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
     ]);
 
     const students = [...studentsRaw].sort((a, b) => Number(a.slNo) - Number(b.slNo));
@@ -245,14 +243,12 @@ attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
   }
 });
 
-attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
-  const { username } = req.user;
-  const query = req.user.role === "master" ? {} : { createdBy: username };
+attendanceRouter.get("/student/:slNo", async (req, res) => {
+  const { Attendance } = req.tenantModels;
   const { slNo } = req.params;
   
   const allAttendance = await Attendance.find({ 
-    "presentStudents.slNo": slNo,
-    ...query
+    "presentStudents.slNo": slNo
   }).sort({ date: -1 }).lean();
 
   const history = allAttendance.map(att => {
@@ -266,7 +262,7 @@ attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
     };
   });
 
-  const allDateDocs = await Attendance.find(query, { date: 1 }).sort({ date: -1 }).lean();
+  const allDateDocs = await Attendance.find({}, { date: 1 }).sort({ date: -1 }).lean();
   const presentDates = new Set(history.map(h => h.date));
   
   const fullLog = allDateDocs.map(doc => {
@@ -284,4 +280,3 @@ attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
 });
 
 module.exports = { attendanceRouter };
-

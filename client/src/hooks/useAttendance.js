@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { apiFetch } from "../lib/api";
 import { todayParts, toIsoDate } from "../lib/date";
 
-export function useAttendance(initialDate) {
+export function useAttendance(initialDate, viewDistrict, viewPlace) {
   const [date, setDate] = useState(initialDate || toIsoDate(todayParts().y, todayParts().m, todayParts().d));
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -13,11 +13,17 @@ export function useAttendance(initialDate) {
   const [prevStockStats, setPrevStockStats] = useState({ opening: 0, sold: 0 });
   const [message, setMessage] = useState("Jai Srimannarayana! Thank you for attending the session today.");
 
-  const load = useCallback(async (d) => {
+  const load = useCallback(async (d, vDist, vPlace) => {
     setBusy(true);
     setError("");
     try {
-      const data = await apiFetch(`/api/attendance/${encodeURIComponent(d)}`);
+      let url = `/api/attendance/${encodeURIComponent(d)}`;
+      const params = new URLSearchParams();
+      if (vDist) params.append("district", vDist);
+      if (vPlace) params.append("place", vPlace);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      const data = await apiFetch(url);
       setRows(data.students || []);
       setInfo({
         total: data.total,
@@ -76,8 +82,8 @@ export function useAttendance(initialDate) {
   }, [initialDate, setDate, date]);
 
   useEffect(() => {
-    if (date) load(date);
-  }, [date, load]);
+    if (date) load(date, viewDistrict, viewPlace);
+  }, [date, load, viewDistrict, viewPlace]);
 
   return {
     date, setDate,

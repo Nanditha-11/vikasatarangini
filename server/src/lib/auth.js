@@ -7,7 +7,8 @@ function signAdminToken(admin) {
     role: admin.role || "admin", 
     username: admin.username,
     district: admin.district,
-    place: admin.place 
+    place: admin.place,
+    whatsappLink: admin.whatsappLink
   }, secret, { expiresIn: "7d" });
 }
 
@@ -28,7 +29,7 @@ function requireAuth(req, res, next) {
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error("Missing JWT_SECRET env var");
     const payload = jwt.verify(token, secret);
-    if (!payload || payload.role !== "admin") {
+    if (!payload || (payload.role !== "admin" && payload.role !== "master")) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     req.user = payload;
