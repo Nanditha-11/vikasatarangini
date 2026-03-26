@@ -76,14 +76,6 @@ connectDb()
 
     // Ensure the default accounts exist
     await ensureAdmin({
-      username: "admin", 
-      password: "jeeyarswamy",
-      email: "vikasatarangini4@gmail.com",
-      district: "Headquarters",
-      place: "Headquarters"
-    });
-
-    await ensureAdmin({
       username: "vikasatarangini", 
       password: "jeeyarswamy",
       email: "vikasatarangini4@gmail.com",
