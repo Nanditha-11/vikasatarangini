@@ -6,7 +6,7 @@ services:
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
-        value: 18.x
+        value: 20
       - key: PORT
         value: 5050
       - key: MONGODB_URI
