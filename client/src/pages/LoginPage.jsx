@@ -477,6 +477,9 @@ export function LoginPage() {
       </div>
 
       <img src="/image2.jpg" alt="Right side" className="login-side-image" />
+      <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', color: '#94a3b8', fontSize: '12px', background: 'rgba(255,255,255,0.8)', padding: '5px 15px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+        Live Status: <b>Deployed Mar 26, 06:25 PM</b>
+      </div>
     </div>
   );
 }

@@ -50,6 +50,9 @@ export function Layout({ title, subtitle, children }) {
       </div>
 
       {children}
+      <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid #e2e8f0', color: '#94a3b8', fontSize: '13px' }}>
+        Live Status: <b>Deployed Mar 26, 06:25 PM</b>
+      </div>
     </div>
   );
 }

@@ -199,23 +199,36 @@ authRouter.post("/register", async (req, res) => {
     }
 
     // Check if username already exists
-    const existing = await Admin.findOne({
-      username: { $regex: new RegExp(`^${username}$`, "i") }
+    const existing = await Admin.findOne({ 
+      username: { $regex: new RegExp(`^${username}$`, "i") } 
     });
-    if (existing) {
-      return res.status(400).json({ error: "Username already taken" });
-    }
 
-    const admin = new Admin({
-      username,
-      password,
-      email,
-      district,
-      place,
-      whatsappLink: whatsappLink || "",
-      status: "pending",
-      role: "admin"
-    });
+    let admin;
+    if (existing) {
+      if (existing.status === "approved") {
+        return res.status(400).json({ error: "Username already taken" });
+      }
+      
+      // If pending or rejected, update the existing record instead of creating a new one
+      existing.password = password;
+      existing.email = email;
+      existing.district = district;
+      existing.place = place;
+      existing.whatsappLink = whatsappLink || "";
+      existing.status = "pending"; // Reset to pending if it was rejected
+      admin = existing;
+    } else {
+      admin = new Admin({
+        username,
+        password,
+        email,
+        district,
+        place,
+        whatsappLink: whatsappLink || "",
+        status: "pending",
+        role: "admin"
+      });
+    }
 
     await admin.save();
 
