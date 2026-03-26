@@ -1,19 +1,19 @@
 services:
   - type: web
     name: vikasatarangini
-    env: node
-    plan: free
-    buildCommand: npm install && npm run build
+    runtime: node
+    buildCommand: npm run build
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: PORT
+        value: 5050
       - key: MONGODB_URI
-        sync: false # Set this in Render dashboard
+        sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: NODE_ENV
-        value: production
-      - key: ADMIN_USERNAME
-        value: vikasatarangini
-      - key: ADMIN_PASSWORD
-        value: jeeyarswamy
-
+      - key: GMAIL_USER
+        value: vikasatarangini4@gmail.com
+      - key: GMAIL_PASS
+        value: "cljt mwaq ktob dodw"
