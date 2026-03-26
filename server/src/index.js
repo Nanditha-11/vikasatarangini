@@ -91,7 +91,7 @@ connectDb()
     // Ensure vikasatarangini admin exists (Pending until masteradmin approves)
     await ensureAdmin({
       username: "vikasatarangini", 
-      password: "swarnamrutham",
+      password: "jeeyarswamy",
       email: "vikasatarangini4@gmail.com",
       district: "Karimnagar",
       place: "Huzurabad",
