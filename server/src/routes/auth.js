@@ -15,12 +15,12 @@ authRouter.post("/login", async (req, res) => {
 
   // Strictly allow only 'vikasatarangini'
   if (username !== "vikasatarangini") {
-    return res.status(401).json({ error: "Access denied: Only 'vikasatarangini' is allowed to sign in." });
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
   const admin = await Admin.findOne({ username, district, place }).lean();
   if (!admin || admin.password !== password) {
-    return res.status(401).json({ error: "Invalid credentials for this location" });
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
   const token = signAdminToken();
