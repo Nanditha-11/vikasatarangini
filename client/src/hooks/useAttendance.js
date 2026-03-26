@@ -60,7 +60,13 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
         remark: s.remark || "",
       }));
 
-      await apiFetch(`/api/attendance/${encodeURIComponent(date)}/save`, {
+      let saveUrl = `/api/attendance/${encodeURIComponent(date)}/save`;
+      const params = new URLSearchParams();
+      if (viewDistrict) params.append("district", viewDistrict);
+      if (viewPlace) params.append("place", viewPlace);
+      if (params.toString()) saveUrl += `?${params.toString()}`;
+
+      await apiFetch(saveUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ presentStudents, message, openingStock }),

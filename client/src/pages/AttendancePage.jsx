@@ -7,6 +7,7 @@ import { AttendanceHeader } from "../components/AttendanceHeader";
 import { StudentTable } from "../components/StudentTable";
 import { StudentHistoryLog } from "../components/StudentHistoryLog";
 import { WhatsAppEditor } from "../components/WhatsAppEditor";
+import { StudentAdmin } from "../components/StudentAdmin";
 import { MarkingModal } from "../components/MarkingModal";
 import { toIsoDate, todayParts } from "../lib/date";
 
@@ -202,7 +203,13 @@ export function AttendancePage() {
 
       <div className="grid dashboard-grid" style={{ gap: '24px' }}>
         <div>
-
+          <StudentAdmin 
+            onRefresh={() => load(date, viewDistrict, viewPlace)} 
+            busy={busy} 
+            setBusy={setBusy} 
+            setError={setError} 
+            rows={rows} 
+          />
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
             {(() => {
               const getModeStyle = (mode) => {

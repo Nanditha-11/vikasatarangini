@@ -16,14 +16,24 @@ StudentSchema.index({ slNo: 1 }, { unique: true });
 
 const AttendanceSchema = new mongoose.Schema({
   date: { type: String, required: true }, // Format YYYY-MM-DD
+  presentStudents: [
+    {
+      slNo: { type: String, required: true },
+      paymentMethod: { type: String, enum: ["Cash", "Online", "Free"], default: "Cash" },
+      quantity: { type: Number, default: 0 },
+      remark: { type: String, default: "" },
+    },
+  ],
+  absentStudents: [
+    {
+      slNo: { type: String, required: true },
+      name: { type: String },
+    },
+  ],
   message: String,
   openingStock: { type: Number, default: 0 },
-  records: [{
-    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
-    present: { type: Boolean, default: false },
-    soldCount: { type: Number, default: 0 },
-    payment: { type: Number, default: 0 }
-  }],
+  district: String,
+  place: String,
   createdAt: { type: Date, default: Date.now }
 });
 AttendanceSchema.index({ date: 1 }, { unique: true });

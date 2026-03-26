@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "69bd92fb55240bbbce303c3f",
+    "username": "vikasatarangini",
+    "password": "Pandu@0105",
+    "email": "vikasatarangini4@gmail.com",
+    "createdAt": "2026-03-20T18:33:31.303Z",
+    "updatedAt": "2026-03-26T16:19:23.093Z",
+    "__v": 0,
+    "district": "Karimnagar",
+    "place": "Huzurabad",
+    "role": "admin",
+    "status": "approved",
+    "whatsappLink": "",
+    "inviteTemplate": "Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}",
+    "welcomeMessage": "Jai Srimannarayana! Thank you for attending the session today."
+  },
+  {
+    "_id": "69c4beb0490c5b71840e623d",
+    "username": "Admin",
+    "__v": 0,
+    "createdAt": "2026-03-26T05:05:52.342Z",
+    "district": "Main",
+    "email": "swarnamrutham3@gmail.com",
+    "password": "swarnamrutham",
+    "place": "Main",
+    "role": "master",
+    "status": "approved",
+    "updatedAt": "2026-03-26T16:19:22.871Z",
+    "whatsappLink": ""
+  }
+]
