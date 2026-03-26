@@ -124,6 +124,9 @@ authRouter.post("/register", async (req, res) => {
     if (username) {
       username = username.charAt(0).toUpperCase() + username.slice(1);
     }
+    if (place) {
+      place = place.charAt(0).toUpperCase() + place.slice(1);
+    }
     password = password?.trim();
     
     // Check if username already exists
