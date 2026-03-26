@@ -9,27 +9,54 @@ const authRouter = express.Router();
 let activeOTP = null;
 let otpExpiry = null;
 
+authRouter.get("/places/:district", async (req, res) => {
+  try {
+    const { district } = req.params;
+    // Get unique approved places for this district
+    const places = await Admin.distinct("place", { district });
+    res.json(places);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 authRouter.post("/login", async (req, res) => {
-  const { username, password, district, place } = req.body || {};
+  let { username, password, district, place } = req.body;
+  username = username?.trim();
+  password = password?.trim();
   if (!username || !password || !district || !place) return res.status(400).json({ error: "Missing fields" });
 
-  // Strictly allow only 'vikasatarangini'
-  if (username !== "vikasatarangini") {
-    return res.status(401).json({ error: "Invalid credentials" });
-  }
-
-  const admin = await Admin.findOne({ username, district, place }).lean();
+  const admin = await Admin.findOne({ 
+    username: { $regex: new RegExp(`^${username}$`, "i") }, 
+    district, 
+    place 
+  }).lean();
   if (!admin || admin.password !== password) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
+  // Check if account is approved
+  if (admin.status !== "approved") {
+    return res.status(401).json({ error: "Account pending approval. Please contact the Master Admin." });
+  }
+
   const token = signAdminToken();
-  return res.json({ token });
+  return res.json({ 
+    token,
+    user: {
+      id: admin._id,
+      username: admin.username,
+      role: admin.role,
+      district: admin.district,
+      place: admin.place
+    }
+  });
 });
 
 authRouter.post("/forgot-password", async (req, res) => {
   const { email } = req.body || {};
-  if (!email || email !== "vikasatarangini4@gmail.com") {
+  const admin = await Admin.findOne({ email });
+  if (!admin) {
     return res.status(400).json({ error: "Invalid admin email" });
   }
 
@@ -83,6 +110,37 @@ authRouter.post("/reset-password", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Database error: " + err.message });
+  }
+});
+
+authRouter.post("/register", async (req, res) => {
+  try {
+    let { username, password, email, district, place } = req.body;
+    username = username?.trim();
+    password = password?.trim();
+    
+    // Check if username already exists
+    const existing = await Admin.findOne({ 
+      username: { $regex: new RegExp(`^${username}$`, "i") } 
+    });
+    if (existing) {
+      return res.status(400).json({ error: "Username already taken" });
+    }
+
+    const admin = new Admin({
+      username,
+      password,
+      email,
+      district,
+      place,
+      status: "pending",
+      role: "admin"
+    });
+
+    await admin.save();
+    res.status(201).json({ message: "Registration successful. Please wait for Master Admin approval." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -32,6 +32,9 @@ export function AttendancePage() {
   const [markingStudent, setMarkingStudent] = useState(null);
   const [modifyingStudent, setModifyingStudent] = useState(null);
 
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+
   const toggleStudent = (slNo, paymentMethod = "Cash", quantity = 1, forceUpdate = false) => {
     const nextRows = rows.map(r => {
       if (r.slNo === slNo) {
@@ -198,6 +201,7 @@ export function AttendancePage() {
         absentCount={absentCount}
         totalCount={rows.length}
         soldCount={totalSold}
+        user={user}
       />
 
       <div className="grid dashboard-grid" style={{ gap: '24px' }}>

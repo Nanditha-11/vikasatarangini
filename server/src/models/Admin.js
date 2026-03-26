@@ -7,6 +7,8 @@ const adminSchema = new mongoose.Schema(
     email: { type: String, required: true },
     district: { type: String, required: true, default: "Default District" },
     place: { type: String, required: true, default: "Default Place" },
+    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    role: { type: String, enum: ["master", "admin"], default: "admin" }
   },
   { timestamps: true }
 );

@@ -6,6 +6,7 @@ const { connectDb } = require("./lib/db");
 const { authRouter } = require("./routes/auth");
 const { studentsRouter } = require("./routes/students");
 const { attendanceRouter } = require("./routes/attendance");
+const { adminManagementRouter } = require("./routes/adminManagement");
 const Admin = require("./models/Admin");
 
 dotenv.config();
@@ -41,6 +42,7 @@ const path = require("path");
 app.use("/api/auth", authRouter);
 app.use("/api/students", studentsRouter);
 app.use("/api/attendance", attendanceRouter);
+app.use("/api/admins", adminManagementRouter);
 
 // Serve static files from the React app
 const clientPath = path.join(__dirname, "../../client/dist");
@@ -57,11 +59,9 @@ const port = Number(process.env.PORT || 5000);
 connectDb()
   .then(async () => {
     // Function to ensure an admin account exists
+    // Function to ensure an admin account exists
     const ensureAdmin = async (adminData) => {
       try {
-        // Delete any other admins to strictly enforce 'vikasatarangini' only
-        await Admin.deleteMany({ username: { $ne: "vikasatarangini" } });
-
         await Admin.updateOne(
           { username: adminData.username },
           { $set: adminData },
@@ -77,13 +77,26 @@ connectDb()
       }
     };
 
-    // Ensure the default accounts exist
+    // Ensure the Master Admin exists (Automatically approved)
+    await ensureAdmin({
+      username: "Admin", 
+      password: "swarnamrutham", 
+      email: "vikasatarangini4@gmail.com",
+      district: "Main",
+      place: "Main",
+      status: "approved",
+      role: "master"
+    });
+
+    // Ensure vikasatarangini admin exists (Pending until masteradmin approves)
     await ensureAdmin({
       username: "vikasatarangini", 
-      password: "jeeyarswamy",
+      password: "swarnamrutham",
       email: "vikasatarangini4@gmail.com",
       district: "Karimnagar",
-      place: "Huzurabad"
+      place: "Huzurabad",
+      status: "approved",
+      role: "admin"
     });
 
     const localIp = getLocalIp();

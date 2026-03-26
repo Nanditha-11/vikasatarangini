@@ -719,11 +719,14 @@ tbody tr:last-child td {
 
 @media (max-width: 950px) {
   .login-side-image {
-    display: none;
+    max-width: 100%;
+    height: 200px; /* Smaller for mobile */
+    border-radius: 12px;
   }
 
   .login-card-container {
     flex: 1;
+    width: 100%;
     max-width: 520px;
   }
 }
@@ -983,8 +986,11 @@ tbody tr:last-child td {
 
   /* Specific page improvements */
   .login-page-wrapper {
-    flex-direction: column;
-    padding: 15px;
+    flex-direction: column !important;
+    padding: 15px !important;
+    gap: 20px !important;
+    min-height: auto !important;
+    justify-content: flex-start !important;
   }
 
   .login-card-container {

@@ -3,6 +3,9 @@ import { setToken } from "../lib/api";
 
 export function Layout({ title, subtitle, children }) {
   const nav = useNavigate();
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isMaster = user?.role === "master";
 
   return (
     <div className="container">
@@ -16,9 +19,21 @@ export function Layout({ title, subtitle, children }) {
         </div>
 
         <div className="row" style={{ gap: '20px', flex: 1, justifyContent: 'center' }}>
-          <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/")}>Home</button>
-          <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/history")}>Attendance History</button>
-          <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/about")}>About</button>
+          {!isMaster ? (
+            <>
+              <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/")}>Home</button>
+              <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/history")}>Attendance History</button>
+              <button className="btn" style={{ background: 'none', border: 'none', fontWeight: '600' }} onClick={() => nav("/about")}>About</button>
+            </>
+          ) : (
+            <button 
+              className="btn" 
+              style={{ background: 'none', border: 'none', fontWeight: '700', color: '#2563eb', fontSize: '18px' }} 
+              onClick={() => nav("/master-dashboard")}
+            >
+              Manage Admins
+            </button>
+          )}
         </div>
 
         <div className="actions">

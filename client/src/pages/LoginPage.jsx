@@ -1,52 +1,26 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { apiFetch, setToken } from "../lib/api";
 
 export function LoginPage() {
   const nav = useNavigate();
   const [view, setView] = useState("login"); // login | forgot | otp | reset
   
-  // District/Place Data (Telangana Districts)
-  const locations = {
-    "Adilabad": ["Adilabad"],
-    "Bhadradri Kothagudem": ["Kothagudem"],
-    "Hanumakonda": ["Warangal"],
-    "Hyderabad": ["Hyderabad"],
-    "Jagtial": ["Jagtial"],
-    "Jangaon": ["Jangaon"],
-    "Jayashankar Bhupalpally": ["Bhupalpally"],
-    "Jogulamba Gadwal": ["Gadwal"],
-    "Kamareddy": ["Kamareddy"],
-    "Karimnagar": ["Huzurabad"],
-    "Khammam": ["Khammam"],
-    "Kumuram Bheem": ["Asifabad"],
-    "Mahabubabad": ["Mahabubabad"],
-    "Mahabubnagar": ["Mahabubnagar"],
-    "Mancherial": ["Mancherial"],
-    "Medak": ["Medak"],
-    "Medchal–Malkajgiri": ["Medchal"],
-    "Mulugu": ["Mulugu"],
-    "Nagarkurnool": ["Nagarkurnool"],
-    "Nalgonda": ["Nalgonda"],
-    "Narayanpet": ["Narayanpet"],
-    "Nirmal": ["Nirmal"],
-    "Nizamabad": ["Nizamabad"],
-    "Peddapalli": ["Peddapalli"],
-    "Rajanna Sircilla": ["Sircilla"],
-    "Rangareddy": ["Shamshabad"],
-    "Sangareddy": ["Sangareddy"],
-    "Siddipet": ["Siddipet"],
-    "Suryapet": ["Suryapet"],
-    "Vikarabad": ["Vikarabad"],
-    "Wanaparthy": ["Wanaparthy"],
-    "Warangal": ["Warangal"],
-    "Yadadri Bhuvanagiri": ["Bhuvanagiri"]
-  };
+  // Hardcoded districts, but places are dynamic
+  const districts = [
+    "Main", "Adilabad", "Bhadradri Kothagudem", "Hanumakonda", "Hyderabad", 
+    "Jagtial", "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal", 
+    "Kamareddy", "Karimnagar", "Khammam", "Kumuram Bheem", "Mahabubabad", 
+    "Mahabubnagar", "Mancherial", "Medak", "Medchal–Malkajgiri", "Mulugu", 
+    "Nagarkurnool", "Nalgonda", "Narayanpet", "Nirmal", "Nizamabad", 
+    "Peddapalli", "Rajanna Sircilla", "Rangareddy", "Sangareddy", "Siddipet", 
+    "Suryapet", "Vikarabad", "Wanaparthy", "Warangal", "Yadadri Bhuvanagiri"
+  ];
 
-  const [districts] = useState(Object.keys(locations));
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedPlace, setSelectedPlace] = useState("");
   const [places, setPlaces] = useState([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -60,14 +34,28 @@ export function LoginPage() {
 
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
-  // Update places when district changes
+  // Fetch unique approved places when district changes
   useEffect(() => {
-    if (selectedDistrict) {
-      setPlaces(locations[selectedDistrict]);
-      setSelectedPlace("");
-    } else {
-      setPlaces([]);
+    async function fetchPlaces() {
+      if (!selectedDistrict) {
+        setPlaces([]);
+        return;
+      }
+      setLoadingPlaces(true);
+      try {
+        const data = await apiFetch(`/api/auth/places/${selectedDistrict}`);
+        const formatted = data.map(p => p.charAt(0).toUpperCase() + p.slice(1));
+        // Remove duplicates after capitalization
+        setPlaces([...new Set(formatted)]);
+        setSelectedPlace("");
+      } catch (err) {
+        console.error("Failed to fetch places:", err);
+        setPlaces([]);
+      } finally {
+        setLoadingPlaces(false);
+      }
     }
+    fetchPlaces();
   }, [selectedDistrict]);
 
   async function onLogin(e) {
@@ -89,6 +77,7 @@ export function LoginPage() {
         }),
       });
       setToken(data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
       nav("/", { replace: true });
     } catch (err) {
       setError(err.message || "Login failed");
@@ -97,8 +86,9 @@ export function LoginPage() {
     }
   }
 
-  async function onSendOTP(e) {
-    if (e) e.preventDefault();
+  // OTP and Reset functions remain the same...
+  async function onForgot(e) {
+    e.preventDefault();
     setError("");
     setBusy(true);
     try {
@@ -109,57 +99,43 @@ export function LoginPage() {
       });
       setView("otp");
     } catch (err) {
-      setError(err.message || "Failed to send OTP");
+      setError(err.message || "Email not found");
     } finally {
       setBusy(false);
     }
   }
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) value = value[value.length - 1];
-    if (!/^\d*$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next
-    if (value && index < 3) {
-      otpRefs[index + 1].current.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs[index - 1].current.focus();
-    }
-  };
-
-  async function onVerifyOTP(e) {
+  async function onVerifyOtp(e) {
     e.preventDefault();
-    const code = otp.join("");
-    if (code.length < 4) return setError("Please enter the 4-digit OTP");
-    setView("reset");
+    setError("");
+    setBusy(true);
+    try {
+      await apiFetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otp: otp.join("") }),
+      });
+      setView("reset");
+    } catch (err) {
+      setError(err.message || "Invalid OTP");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onReset(e) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) return setError("Passwords do not match");
-    
+    if (newPassword !== confirmPassword) return setError("Passwords don't match");
     setError("");
     setBusy(true);
     try {
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: otp.join(""), newPassword }),
+        body: JSON.stringify({ email, newPassword }),
       });
-      alert("Password reset success! Please login.");
       setView("login");
-      setPassword("");
-      setOtp(["", "", "", ""]);
-      setNewPassword("");
-      setConfirmPassword("");
+      alert("Password reset successful! Please login.");
     } catch (err) {
       setError(err.message || "Reset failed");
     } finally {
@@ -167,192 +143,197 @@ export function LoginPage() {
     }
   }
 
+  if (view === "forgot") {
+    return (
+      <div className="login-page-wrapper">
+        <img src="/image1.jpg" alt="Left side" className="login-side-image" />
+        <div className="login-card-container">
+          <div className="card">
+            <h2 style={{ textAlign: "center", marginBottom: 20 }}>Forgot Password</h2>
+            {error && <div className="error">{error}</div>}
+            <form onSubmit={onForgot}>
+              <div className="field">
+                <label>Email Address</label>
+                <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter Email" required />
+              </div>
+              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px' }}>
+                {busy ? "Sending..." : "Send Reset OTP"}
+              </button>
+              <button type="button" className="btn" onClick={() => setView("login")} style={{ width: "100%", marginTop: 10 }}>Back to Login</button>
+            </form>
+          </div>
+        </div>
+        <img src="/image2.jpg" alt="Right side" className="login-side-image" />
+      </div>
+    );
+  }
+
+  if (view === "otp") {
+    return (
+      <div className="login-page-wrapper">
+        <img src="/image1.jpg" alt="Left side" className="login-side-image" />
+        <div className="login-card-container">
+          <div className="card">
+            <h2 style={{ textAlign: "center", marginBottom: 10 }}>Verify OTP</h2>
+            <p style={{ textAlign: "center", color: "#64748b", marginBottom: 20 }}>Enter the 4-digit code sent to your email</p>
+            {error && <div className="error">{error}</div>}
+            <form onSubmit={onVerifyOtp}>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={otpRefs[i]}
+                    className="input"
+                    style={{ width: 50, textAlign: "center", fontSize: 24, fontWeight: "bold" }}
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      const newOtp = [...otp];
+                      newOtp[i] = val;
+                      setOtp(newOtp);
+                      if (val && i < 3) otpRefs[i + 1].current.focus();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs[i - 1].current.focus();
+                    }}
+                  />
+                ))}
+              </div>
+              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px' }}>Verify OTP</button>
+            </form>
+          </div>
+        </div>
+        <img src="/image2.jpg" alt="Right side" className="login-side-image" />
+      </div>
+    );
+  }
+
+  if (view === "reset") {
+    return (
+      <div className="login-page-wrapper">
+        <img src="/image1.jpg" alt="Left side" className="login-side-image" />
+        <div className="login-card-container">
+          <div className="card">
+            <h2 style={{ textAlign: "center", marginBottom: 20 }}>New Password</h2>
+            {error && <div className="error">{error}</div>}
+            <form onSubmit={onReset}>
+              <div className="field"><label>New Password</label><input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required /></div>
+              <div className="field"><label>Confirm Password</label><input className="input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></div>
+              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px' }}>Update Password</button>
+            </form>
+          </div>
+        </div>
+        <img src="/image2.jpg" alt="Right side" className="login-side-image" />
+      </div>
+    );
+  }
+
   return (
     <div className="login-page-wrapper">
       <img src="/image1.jpg" alt="Left side" className="login-side-image" />
 
-      <div className="login-card-container" style={{ width: '100%', maxWidth: '480px', zIndex: 2 }}>
+      <div className="login-card-container">
         <div className="card">
-          {view === "login" && (
-            <>
-              <h2 style={{ textAlign: "center", marginBottom: 6, marginTop: 10, fontStyle: "italic", fontSize: '2em' }}>
-                Vikasa Tarangini
-              </h2>
-              <h3 style={{ textAlign: "center", marginBottom: 16, color: 'var(--muted)', fontSize: '1.2em' }}>
-                Admin Login
-              </h3>
+          <h2 style={{ textAlign: "center", marginBottom: 6, fontStyle: "italic", fontSize: '2.4em', color: '#0d2866', fontWeight: '900' }}>
+            Vikasa Tarangini
+          </h2>
+          <h3 style={{ textAlign: "center", marginBottom: 24, color: '#475569', fontSize: '1.2em', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>
+            Admin Login
+          </h3>
 
-              {error && <div className="error">{error}</div>}
+          {error && <div className="error">{error}</div>}
 
-              <form onSubmit={onLogin} style={{ marginTop: 12 }}>
+          <form onSubmit={onLogin} style={{ marginTop: 12 }}>
+            <div className="field">
+              <label>District</label>
+              <select
+                className="input"
+                name="district"
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                required
+                style={{ appearance: 'auto', paddingRight: '30px' }}
+              >
+                <option value="">-- Select District --</option>
+                {districts.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Place</label>
+              <select
+                className="input"
+                name="place"
+                value={selectedPlace}
+                onChange={(e) => setSelectedPlace(e.target.value)}
+                required
+                disabled={!selectedDistrict || loadingPlaces}
+                style={{ appearance: 'auto', paddingRight: '30px' }}
+              >
+                <option value="">{loadingPlaces ? "Loading..." : "-- Select Place --"}</option>
+                {places.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            {selectedDistrict && selectedPlace && (
+              <>
                 <div className="field">
-                  <label>District</label>
-                  <select
+                  <label>Username</label>
+                  <input
                     className="input"
-                    value={selectedDistrict}
-                    onChange={(e) => setSelectedDistrict(e.target.value)}
-                    style={{ appearance: 'auto', paddingRight: '30px' }}
-                  >
-                    <option value="">-- Select District --</option>
-                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    required
+                  />
                 </div>
 
-                {selectedDistrict && (
-                  <div className="field">
-                    <label>Place</label>
-                    <select
-                      className="input"
-                      value={selectedPlace}
-                      onChange={(e) => setSelectedPlace(e.target.value)}
-                      style={{ appearance: 'auto', paddingRight: '30px' }}
-                    >
-                      <option value="">-- Select Place --</option>
-                      {places.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                )}
+                <div className="field">
+                  <label>Password</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••••"
+                    required
+                  />
+                </div>
 
-                {selectedPlace && (
-                  <>
-                    <div className="field">
-                      <label>Username</label>
-                      <input
-                        className="input"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Enter username"
-                      />
-                    </div>
-                    <div className="field">
-                      <label>Password</label>
-                      <input
-                        className="input"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password"
-                        autoComplete="current-password"
-                      />
-                    </div>
-
-                    <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px', fontSize: '1.1em' }}>
-                      {busy ? "Signing in..." : "Login"}
-                    </button>
-                  </>
-                )}
-              </form>
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <button 
                   className="btn" 
-                  disabled={busy}
-                  style={{ borderColor: 'transparent', fontSize: '0.9em' }} 
-                  onClick={() => setView("forgot")}
+                  disabled={busy} 
+                  style={{ 
+                    width: "100%", 
+                    padding: '16px', 
+                    fontSize: '1.2em', 
+                    marginTop: '20px', 
+                    background: 'linear-gradient(135deg, #0d2866, #0072ff)', 
+                    color: 'white', 
+                    border: 'none', 
+                    fontWeight: 'bold', 
+                    letterSpacing: '1px',
+                    boxShadow: '0 10px 20px rgba(13, 40, 102, 0.2)',
+                    justifyContent: 'center'
+                  }}
                 >
+                  {busy ? "Signing in..." : "Login"}
+                </button>
+              </>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 24, padding: '15px 0', borderTop: '1px solid #eee', alignItems: 'center' }}>
+              {selectedDistrict && selectedPlace && (
+                <button type="button" className="btn" style={{ background: 'none', border: 'none', padding: 0, height: 'auto', color: '#0d2866', fontSize: 13, fontWeight: 'bold' }} onClick={() => setView("forgot")}>
                   Forgot Password?
                 </button>
-              </div>
-            </>
-          )}
-
-          {view === "forgot" && (
-            <>
-              <h2 style={{ textAlign: "center" }}>Forgot Password</h2>
-              <p className="muted" style={{ textAlign: "center" }}>
-                Enter your registered email to receive a 4-digit OTP.
+              )}
+              <p style={{ margin: 0, fontSize: '1.1em', textAlign: 'center' }}>
+                Need an account? <Link to="/register" style={{ color: '#0d2866', fontWeight: 'bold' }}>Register Here</Link>
               </p>
-              {error && <div className="error">{error}</div>}
-              <form onSubmit={onSendOTP} style={{ marginTop: 20 }}>
-                <div className="field">
-                  <label>Registered Email</label>
-                  <input
-                    className="input"
-                    type="email"
-                    placeholder="Enter email address"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <button className="btn primary" disabled={busy} style={{ width: "100%" }}>
-                  {busy ? "Sending OTP..." : "Send OTP"}
-                </button>
-                <button type="button" className="btn" style={{ width: "100%", marginTop: 10 }} onClick={() => setView("login")}>
-                  Back to Login
-                </button>
-              </form>
-            </>
-          )}
-
-          {view === "otp" && (
-            <>
-              <h2 style={{ textAlign: "center" }}>Enter OTP</h2>
-              <p className="muted" style={{ textAlign: "center" }}>
-                Enter the 4-digit code sent to {email}.
-              </p>
-              {error && <div className="error">{error}</div>}
-              <form onSubmit={onVerifyOTP} style={{ marginTop: 20 }}>
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '24px' }}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={otpRefs[i]}
-                      className="input"
-                      style={{ width: '50px', height: '60px', textAlign: 'center', fontSize: '1.5em', fontWeight: 'bold' }}
-                      value={digit}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => handleOtpKeyDown(i, e)}
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                    />
-                  ))}
-                </div>
-                <button className="btn primary" style={{ width: "100%" }}>
-                  Verify OTP
-                </button>
-                <button type="button" className="btn" style={{ width: "100%", marginTop: 10 }} onClick={() => setView("forgot")}>
-                  Resend OTP
-                </button>
-              </form>
-            </>
-          )}
-
-          {view === "reset" && (
-            <>
-              <h2 style={{ textAlign: "center" }}>Create New Password</h2>
-              <p className="muted" style={{ textAlign: "center" }}>
-                Set a strong password for your account.
-              </p>
-              {error && <div className="error">{error}</div>}
-              <form onSubmit={onReset} style={{ marginTop: 20 }}>
-                <div className="field">
-                  <label>New Password</label>
-                  <input
-                    className="input"
-                    type="password"
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label>Confirm Password</label>
-                  <input
-                    className="input"
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <button className="btn primary" disabled={busy} style={{ width: "100%" }}>
-                  {busy ? "Saving..." : "Change Password"}
-                </button>
-              </form>
-            </>
-          )}
+            </div>
+          </form>
         </div>
       </div>
 
@@ -360,4 +341,3 @@ export function LoginPage() {
     </div>
   );
 }
-

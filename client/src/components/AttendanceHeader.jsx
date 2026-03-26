@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { daysInMonth, toIsoDate, todayParts } from "../lib/date";
 
-export function AttendanceHeader({ date, setDate, info, presentCount, absentCount, totalCount, soldCount }) {
+export function AttendanceHeader({ date, setDate, info, presentCount, absentCount, totalCount, soldCount, user }) {
   const [yStr, mStr, dStr] = date.split("-");
   const y = Number(yStr);
   const m = Number(mStr);
@@ -70,8 +70,17 @@ export function AttendanceHeader({ date, setDate, info, presentCount, absentCoun
       </div>
 
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px', alignItems: 'flex-end' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Home</h2>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {user ? (
+            <>
+              <span style={{ fontSize: '1.1em', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{user.district}</span>
+              <h2 style={{ margin: 0, fontSize: '2.2em', fontStyle: 'italic', color: '#0d2866', lineHeight: '1.1' }}>
+                {user.place}
+              </h2>
+            </>
+          ) : (
+            <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Home</h2>
+          )}
         </div>
 
         {info && (
