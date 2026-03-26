@@ -9,11 +9,12 @@ const studentSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     district: { type: String, index: true },
     place: { type: String, index: true },
+    createdBy: { type: String, required: true, index: true },
   },
   { timestamps: true }
 );
 
-studentSchema.index({ slNo: 1, district: 1, place: 1 }, { unique: true });
+studentSchema.index({ slNo: 1, createdBy: 1 }, { unique: true });
 
 module.exports = mongoose.model("Student", studentSchema);
 

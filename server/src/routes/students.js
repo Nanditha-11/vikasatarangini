@@ -8,8 +8,8 @@ const Student = require("../models/Student");
 const studentsRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-async function getNextSlNo(district, place) {
-  const query = district === "Main" ? {} : { district, place };
+async function getNextSlNo(username) {
+  const query = { createdBy: username };
   const lastStudent = await Student.find(query).sort({ slNo: -1 }).limit(1).lean();
   if (!lastStudent.length) return "1";
   
@@ -23,21 +23,20 @@ async function getNextSlNo(district, place) {
 }
 
 studentsRouter.get("/", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
-  const query = district === "Main" ? {} : { district, place };
+  const query = req.user.role === "master" ? {} : { createdBy: req.user.username };
   const students = await Student.find(query).lean();
   students.sort((a, b) => Number(a.slNo) - Number(b.slNo));
   res.json({ students });
 });
 
 studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, res) => {
-  const { district, place } = req.user;
+  const { district, place, username } = req.user;
   if (!req.file?.buffer) return res.status(400).json({ error: "Missing file" });
 
   const parsed = parseStudentsFromExcel(req.file.buffer);
   if (!parsed.length) return res.status(400).json({ error: "No valid student rows found" });
 
-  let nextId = parseInt(await getNextSlNo(district, place), 10);
+  let nextId = parseInt(await getNextSlNo(username), 10);
 
   const ops = parsed.map((s) => {
     let slNo = s.slNo;
@@ -46,7 +45,7 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
     }
     return {
       updateOne: {
-        filter: { slNo, district, place },
+        filter: { slNo, createdBy: username },
         update: {
           $set: {
             slNo,
@@ -55,7 +54,8 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
             age: s.age ?? null,
             phone: s.phone,
             district,
-            place
+            place,
+            createdBy: username
           },
         },
         upsert: true,
@@ -73,7 +73,7 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
 });
 
 studentsRouter.post("/", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  const { district, place, username } = req.user;
   let { slNo, name, fatherName = "", age = null, phone } = req.body || {};
 
   if (!name || !phone) {
@@ -84,33 +84,31 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
   const normalizedPhone = String(phone).trim();
   const normalizedFatherName = String(fatherName || "").trim().toLowerCase();
 
-  // Refined Duplicate Check: Match phone/father and partial name within the same location
+  // Duplicate Check within the same user's scope
   const potentialMatches = await Student.find({ 
     phone: normalizedPhone, 
     fatherName: normalizedFatherName,
-    district,
-    place
+    createdBy: username
   }).lean();
 
   const isDuplicate = potentialMatches.some(m => {
-    if (m.slNo === String(slNo).trim()) return false; // Ignore same student
+    if (m.slNo === String(slNo).trim()) return false;
     const existingName = String(m.name).trim().toLowerCase();
-    // Block if one name is contained in the other
     return normalizedName.includes(existingName) || existingName.includes(normalizedName);
   });
 
   if (isDuplicate) {
-    return res.status(400).json({ error: "Student already exists with similar details in this location" });
+    return res.status(400).json({ error: "Student already exists with similar details in your list" });
   }
 
   if (!slNo) {
-    slNo = await getNextSlNo(district, place);
+    slNo = await getNextSlNo(username);
   }
 
   const normalizedSlNo = String(slNo).trim();
 
   const doc = await Student.findOneAndUpdate(
-    { slNo: normalizedSlNo, district, place },
+    { slNo: normalizedSlNo, createdBy: username },
     {
       $set: {
         slNo: normalizedSlNo,
@@ -119,7 +117,8 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
         age: Number.isFinite(Number(age)) ? Number(age) : null,
         phone: String(phone).trim(),
         district,
-        place
+        place,
+        createdBy: username
       },
     },
     { new: true, upsert: true }
@@ -129,7 +128,7 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
 });
 
 studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  const { username } = req.user;
   const { slNo } = req.params;
   const { name, fatherName, age, phone, password } = req.body;
 
@@ -143,7 +142,7 @@ studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
   }
 
   const updated = await Student.findOneAndUpdate(
-    { slNo, district, place },
+    { slNo, createdBy: username },
     {
       $set: {
         name: String(name).trim(),
@@ -156,14 +155,14 @@ studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
   ).lean();
 
   if (!updated) {
-    return res.status(404).json({ error: "Student not found in this location" });
+    return res.status(404).json({ error: "Student not found in your list" });
   }
 
   res.json({ student: updated });
 });
 
 studentsRouter.delete("/:slNo", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  const { username } = req.user;
   const { slNo } = req.params;
   const { password } = req.body;
 
@@ -172,14 +171,15 @@ studentsRouter.delete("/:slNo", requireAuth, async (req, res) => {
     return res.status(401).json({ error: "Invalid admin password for deletion" });
   }
 
-  const result = await Student.deleteOne({ slNo, district, place });
+  const result = await Student.deleteOne({ slNo, createdBy: username });
   if (result.deletedCount === 0) {
-    return res.status(404).json({ error: "Student not found in this location" });
+    return res.status(404).json({ error: "Student not found in your list" });
   }
   res.json({ ok: true });
 });
 
 studentsRouter.post("/delete-all", requireAuth, async (req, res) => {
+  const { username } = req.user;
   const { password } = req.body;
 
   const expectedPass = process.env.ADMIN_PASSWORD || "admin123";
@@ -187,7 +187,7 @@ studentsRouter.post("/delete-all", requireAuth, async (req, res) => {
     return res.status(401).json({ error: "Invalid admin password for mass deletion" });
   }
 
-  await Student.deleteMany({});
+  await Student.deleteMany({ createdBy: username });
   res.json({ ok: true });
 });
 

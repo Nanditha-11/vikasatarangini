@@ -21,10 +21,11 @@ const attendanceSchema = new mongoose.Schema(
     openingStock: { type: Number, default: 0 },
     district: { type: String, index: true },
     place: { type: String, index: true },
+    createdBy: { type: String, required: true, index: true },
   },
   { timestamps: true }
 );
 
-attendanceSchema.index({ date: 1, district: 1, place: 1 }, { unique: true });
+attendanceSchema.index({ date: 1, createdBy: 1 }, { unique: true });
 
 module.exports = mongoose.model("Attendance", attendanceSchema);

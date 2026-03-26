@@ -17,14 +17,14 @@ function normalizeDateParam(dateStr) {
 }
 
 attendanceRouter.get("/:date", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  const { username } = req.user;
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 
   const startOfDay = dayjs(date).startOf('day').toDate();
   const endOfDay = dayjs(date).endOf('day').toDate();
 
-  const query = district === "Main" ? {} : { district, place };
+  const query = req.user.role === "master" ? {} : { createdBy: username };
 
   const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
     Student.find(query).lean(),
@@ -94,7 +94,7 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
+  const { district, place, username } = req.user;
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 
@@ -111,7 +111,7 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const query = district === "Main" ? {} : { district, place };
+  const query = { createdBy: username };
   const allStudents = await Student.find(query).lean();
   const presentSlNos = new Set(parsed.data.presentStudents.map(p => p.slNo));
   const absentStudents = allStudents
@@ -119,7 +119,7 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
     .map(s => ({ slNo: s.slNo, name: s.name }));
 
   await Attendance.updateOne(
-    { date, district, place },
+    { date, createdBy: username },
     { $set: { 
       date, 
       presentStudents: parsed.data.presentStudents, 
@@ -127,7 +127,8 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
       message: parsed.data.message,
       openingStock: parsed.data.openingStock,
       district,
-      place
+      place,
+      createdBy: username
     } },
     { upsert: true }
   );
@@ -136,8 +137,8 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
-  const query = district === "Main" ? {} : { district, place };
+  const { username } = req.user;
+  const query = req.user.role === "master" ? {} : { createdBy: username };
   try {
     const [allAttendance, totalStudents] = await Promise.all([
       Attendance.find(query).sort({ date: -1 }).lean(),
@@ -181,8 +182,8 @@ attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
-  const query = district === "Main" ? {} : { district, place };
+  const { username } = req.user;
+  const query = req.user.role === "master" ? {} : { createdBy: username };
   try {
     const date = normalizeDateParam(req.params.date);
     if (!date) return res.status(400).json({ error: "Invalid date" });
@@ -240,8 +241,8 @@ attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
-  const { district, place } = req.user;
-  const query = district === "Main" ? {} : { district, place };
+  const { username } = req.user;
+  const query = req.user.role === "master" ? {} : { createdBy: username };
   const { slNo } = req.params;
   
   const allAttendance = await Attendance.find({ 
