@@ -17,16 +17,19 @@ function normalizeDateParam(dateStr) {
 }
 
 attendanceRouter.get("/:date", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 
   const startOfDay = dayjs(date).startOf('day').toDate();
   const endOfDay = dayjs(date).endOf('day').toDate();
 
+  const query = district === "Main" ? {} : { district, place };
+
   const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
-    Student.find().lean(),
-    Attendance.findOne({ date }).lean(),
-    Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+    Student.find(query).lean(),
+    Attendance.findOne({ date, ...query }).lean(),
+    Student.find({ ...query, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
   ]);
 
   const presentMap = new Map(
@@ -45,7 +48,11 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
       present: presentMap.has(s.slNo)
     }));
 
-  const previousAttendance = await Attendance.findOne({ date: { $lt: date } }).sort({ date: -1 }).lean();
+  const previousAttendance = await Attendance.findOne({ 
+    date: { $lt: date },
+    ...query 
+  }).sort({ date: -1 }).lean();
+
   let previousRemainingStock = 0;
   let previousOpeningStock = 0;
   let previousSoldStock = 0;
@@ -87,6 +94,7 @@ attendanceRouter.get("/:date", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
 
@@ -103,20 +111,23 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const allStudents = await Student.find().lean();
+  const query = district === "Main" ? {} : { district, place };
+  const allStudents = await Student.find(query).lean();
   const presentSlNos = new Set(parsed.data.presentStudents.map(p => p.slNo));
   const absentStudents = allStudents
     .filter(s => !presentSlNos.has(s.slNo))
     .map(s => ({ slNo: s.slNo, name: s.name }));
 
   await Attendance.updateOne(
-    { date },
+    { date, district, place },
     { $set: { 
       date, 
       presentStudents: parsed.data.presentStudents, 
       absentStudents: absentStudents,
       message: parsed.data.message,
-      openingStock: parsed.data.openingStock
+      openingStock: parsed.data.openingStock,
+      district,
+      place
     } },
     { upsert: true }
   );
@@ -125,17 +136,17 @@ attendanceRouter.post("/:date/save", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
+  const query = district === "Main" ? {} : { district, place };
   try {
     const [allAttendance, totalStudents] = await Promise.all([
-      Attendance.find().sort({ date: -1 }).lean(),
-      Student.countDocuments()
+      Attendance.find(query).sort({ date: -1 }).lean(),
+      Student.countDocuments(query)
     ]);
 
     const history = allAttendance.map(att => {
       const presentCount = (att.presentStudents || []).length;
       
-      // If we have explicitly stored absentStudents, use that count.
-      // Otherwise, fallback to (Total Students - Present Students).
       let absentCount = (att.absentStudents || []).length;
       if (absentCount === 0 && presentCount > 0) {
         absentCount = Math.max(0, totalStudents - presentCount);
@@ -169,9 +180,9 @@ attendanceRouter.get("/list/history", requireAuth, async (req, res) => {
   }
 });
 
-
-
 attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
+  const query = district === "Main" ? {} : { district, place };
   try {
     const date = normalizeDateParam(req.params.date);
     if (!date) return res.status(400).json({ error: "Invalid date" });
@@ -180,9 +191,9 @@ attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
     const endOfDay = dayjs(date).endOf('day').toDate();
 
     const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
-      Student.find().lean(),
-      Attendance.findOne({ date }).lean(),
-      Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+      Student.find(query).lean(),
+      Attendance.findOne({ date, ...query }).lean(),
+      Student.find({ ...query, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
     ]);
 
     const students = [...studentsRaw].sort((a, b) => Number(a.slNo) - Number(b.slNo));
@@ -229,10 +240,13 @@ attendanceRouter.get("/:date/download", requireAuth, async (req, res) => {
 });
 
 attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
+  const query = district === "Main" ? {} : { district, place };
   const { slNo } = req.params;
   
   const allAttendance = await Attendance.find({ 
-    "presentStudents.slNo": slNo 
+    "presentStudents.slNo": slNo,
+    ...query
   }).sort({ date: -1 }).lean();
 
   const history = allAttendance.map(att => {
@@ -246,9 +260,7 @@ attendanceRouter.get("/student/:slNo", requireAuth, async (req, res) => {
     };
   });
 
-  // To truly show "absent" on specific dates, we would need to know which dates had attendance 
-  // but this student wasn't in presentStudents.
-  const allDateDocs = await Attendance.find({}, { date: 1 }).sort({ date: -1 }).lean();
+  const allDateDocs = await Attendance.find(query, { date: 1 }).sort({ date: -1 }).lean();
   const presentDates = new Set(history.map(h => h.date));
   
   const fullLog = allDateDocs.map(doc => {

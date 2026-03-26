@@ -8,12 +8,12 @@ const Student = require("../models/Student");
 const studentsRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-async function getNextSlNo() {
-  const lastStudent = await Student.find().sort({ slNo: -1 }).limit(1).lean();
+async function getNextSlNo(district, place) {
+  const query = district === "Main" ? {} : { district, place };
+  const lastStudent = await Student.find(query).sort({ slNo: -1 }).limit(1).lean();
   if (!lastStudent.length) return "1";
   
-  // Try to find the maximum numeric slNo
-  const allStudents = await Student.find({}, { slNo: 1 }).lean();
+  const allStudents = await Student.find(query, { slNo: 1 }).lean();
   const max = allStudents.reduce((currMax, s) => {
     const val = parseInt(s.slNo, 10);
     return isNaN(val) ? currMax : Math.max(currMax, val);
@@ -22,19 +22,22 @@ async function getNextSlNo() {
   return String(max + 1);
 }
 
-studentsRouter.get("/", requireAuth, async (_req, res) => {
-  const students = await Student.find().lean();
+studentsRouter.get("/", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
+  const query = district === "Main" ? {} : { district, place };
+  const students = await Student.find(query).lean();
   students.sort((a, b) => Number(a.slNo) - Number(b.slNo));
   res.json({ students });
 });
 
 studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, res) => {
+  const { district, place } = req.user;
   if (!req.file?.buffer) return res.status(400).json({ error: "Missing file" });
 
   const parsed = parseStudentsFromExcel(req.file.buffer);
   if (!parsed.length) return res.status(400).json({ error: "No valid student rows found" });
 
-  let nextId = parseInt(await getNextSlNo(), 10);
+  let nextId = parseInt(await getNextSlNo(district, place), 10);
 
   const ops = parsed.map((s) => {
     let slNo = s.slNo;
@@ -43,7 +46,7 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
     }
     return {
       updateOne: {
-        filter: { slNo },
+        filter: { slNo, district, place },
         update: {
           $set: {
             slNo,
@@ -51,6 +54,8 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
             fatherName: s.fatherName || "",
             age: s.age ?? null,
             phone: s.phone,
+            district,
+            place
           },
         },
         upsert: true,
@@ -68,6 +73,7 @@ studentsRouter.post("/upload", requireAuth, upload.single("file"), async (req, r
 });
 
 studentsRouter.post("/", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
   let { slNo, name, fatherName = "", age = null, phone } = req.body || {};
 
   if (!name || !phone) {
@@ -78,10 +84,12 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
   const normalizedPhone = String(phone).trim();
   const normalizedFatherName = String(fatherName || "").trim().toLowerCase();
 
-  // Refined Duplicate Check: Match phone/father and partial name
+  // Refined Duplicate Check: Match phone/father and partial name within the same location
   const potentialMatches = await Student.find({ 
     phone: normalizedPhone, 
-    fatherName: normalizedFatherName 
+    fatherName: normalizedFatherName,
+    district,
+    place
   }).lean();
 
   const isDuplicate = potentialMatches.some(m => {
@@ -92,17 +100,17 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
   });
 
   if (isDuplicate) {
-    return res.status(400).json({ error: "Student already exists with similar details" });
+    return res.status(400).json({ error: "Student already exists with similar details in this location" });
   }
 
   if (!slNo) {
-    slNo = await getNextSlNo();
+    slNo = await getNextSlNo(district, place);
   }
 
   const normalizedSlNo = String(slNo).trim();
 
   const doc = await Student.findOneAndUpdate(
-    { slNo: normalizedSlNo },
+    { slNo: normalizedSlNo, district, place },
     {
       $set: {
         slNo: normalizedSlNo,
@@ -110,6 +118,8 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
         fatherName: String(fatherName || "").trim(),
         age: Number.isFinite(Number(age)) ? Number(age) : null,
         phone: String(phone).trim(),
+        district,
+        place
       },
     },
     { new: true, upsert: true }
@@ -119,6 +129,7 @@ studentsRouter.post("/", requireAuth, async (req, res) => {
 });
 
 studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
   const { slNo } = req.params;
   const { name, fatherName, age, phone, password } = req.body;
 
@@ -132,7 +143,7 @@ studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
   }
 
   const updated = await Student.findOneAndUpdate(
-    { slNo },
+    { slNo, district, place },
     {
       $set: {
         name: String(name).trim(),
@@ -145,13 +156,14 @@ studentsRouter.put("/:slNo", requireAuth, async (req, res) => {
   ).lean();
 
   if (!updated) {
-    return res.status(404).json({ error: "Student not found" });
+    return res.status(404).json({ error: "Student not found in this location" });
   }
 
   res.json({ student: updated });
 });
 
 studentsRouter.delete("/:slNo", requireAuth, async (req, res) => {
+  const { district, place } = req.user;
   const { slNo } = req.params;
   const { password } = req.body;
 
@@ -160,7 +172,10 @@ studentsRouter.delete("/:slNo", requireAuth, async (req, res) => {
     return res.status(401).json({ error: "Invalid admin password for deletion" });
   }
 
-  await Student.deleteOne({ slNo });
+  const result = await Student.deleteOne({ slNo, district, place });
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ error: "Student not found in this location" });
+  }
   res.json({ ok: true });
 });
 

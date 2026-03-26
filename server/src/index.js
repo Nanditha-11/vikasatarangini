@@ -7,6 +7,7 @@ const { authRouter } = require("./routes/auth");
 const { studentsRouter } = require("./routes/students");
 const { attendanceRouter } = require("./routes/attendance");
 const { adminManagementRouter } = require("./routes/adminManagement");
+const { locationConfigRouter } = require("./routes/locationConfig");
 const Admin = require("./models/Admin");
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/students", studentsRouter);
 app.use("/api/attendance", attendanceRouter);
 app.use("/api/admins", adminManagementRouter);
+app.use("/api/location-config", locationConfigRouter);
 
 // Serve static files from the React app
 const clientPath = path.join(__dirname, "../../client/dist");

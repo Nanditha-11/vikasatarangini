@@ -40,7 +40,7 @@ authRouter.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Account pending approval. Please contact the Master Admin." });
   }
 
-  const token = signAdminToken();
+  const token = signAdminToken(admin);
   return res.json({ 
     token,
     user: {

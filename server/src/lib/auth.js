@@ -1,9 +1,14 @@
 const jwt = require("jsonwebtoken");
 
-function signAdminToken() {
+function signAdminToken(admin) {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("Missing JWT_SECRET env var");
-  return jwt.sign({ role: "admin" }, secret, { expiresIn: "7d" });
+  return jwt.sign({ 
+    role: "admin", 
+    username: admin.username,
+    district: admin.district,
+    place: admin.place 
+  }, secret, { expiresIn: "7d" });
 }
 
 function requireAuth(req, res, next) {
