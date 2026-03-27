@@ -129,30 +129,30 @@ export function AttendanceHistoryDetailPage() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                <th style={{ width: '6%', textAlign: 'center', padding: '12px 8px' }}>ID</th>
-                <th style={{ width: '15%', textAlign: 'left', padding: '12px 8px' }}>Name</th>
-                <th style={{ width: '25%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
-                <th style={{ width: '7%', textAlign: 'center', padding: '12px 8px' }}>Age</th>
-                <th style={{ width: '14%', textAlign: 'center', padding: '12px 8px' }}>Phone</th>
+                <th style={{ width: '8%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
+                <th style={{ width: '13%', textAlign: 'left', padding: '12px 5px' }}>Name</th>
+                <th style={{ width: '13%', textAlign: 'left', padding: '12px 5px' }}>Father Name</th>
+                <th style={{ width: '8%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
+                <th style={{ width: '12%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
                 {activeTab === 'present' ? (
                   <>
-                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Method</th>
-                    <th style={{ width: '5%', textAlign: 'center', padding: '12px 8px' }}>Qty</th>
-                    <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>Amount</th>
-                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Remarks</th>
+                    <th style={{ width: '11%', textAlign: 'center', padding: '12px 5px' }}>Method</th>
+                    <th style={{ width: '9%', textAlign: 'center', padding: '12px 5px' }}>Qty</th>
+                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 5px' }}>Amount</th>
+                    <th style={{ width: '16%', textAlign: 'center', padding: '12px 5px' }}>Remarks</th>
                   </>
                 ) : activeTab === 'new' ? (
-                  <th style={{ width: '24%', textAlign: 'center', padding: '12px 8px' }}>Status</th>
+                  <th style={{ width: '40%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
                 ) : null}
               </tr>
             </thead>
             <tbody>
               {list.map((s) => (
                 <tr key={s.slNo} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ fontWeight: 'bold', textAlign: 'center', padding: '12px 8px' }}>{s.slNo}</td>
+                  <td style={{ fontWeight: 'bold', textAlign: 'center', padding: '12px 5px' }}>{s.slNo}</td>
                   <td 
                     style={{ 
-                      padding: '12px 8px', 
+                      padding: '12px 5px', 
                       color: '#2563eb', 
                       cursor: 'pointer',
                       textDecoration: 'underline',
@@ -164,21 +164,21 @@ export function AttendanceHistoryDetailPage() {
                   >
                     {s.name}
                   </td>
-                  <td style={{ padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.fatherName || "-"}</td>
-                  <td style={{ textAlign: 'center', padding: '12px 8px' }}>{s.age || "-"}</td>
-                  <td style={{ textAlign: 'center', padding: '12px 8px' }}>{s.phone || "-"}</td>
+                  <td style={{ padding: '12px 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.fatherName || "-"}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 5px' }}>{s.age || "-"}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 5px' }}>{s.phone || "-"}</td>
                   {activeTab === 'present' && (
                     <>
-                      <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                      <td style={{ textAlign: 'center', padding: '12px 5px' }}>
                         <span className="pill" style={{ background: '#f3f4f6', fontSize: '0.85em' }}>{s.paymentMethod}</span>
                       </td>
-                      <td style={{ textAlign: 'center', padding: '12px 8px' }}><b>{s.quantity}</b></td>
-                      <td style={{ textAlign: 'center', padding: '12px 8px' }}>₹{s.paymentMethod === 'Free' ? 0 : (s.quantity * 70)}</td>
-                      <td style={{ textAlign: 'center', padding: '12px 8px', color: '#64748b', fontSize: '0.85em' }}>{s.remark || "-"}</td>
+                      <td style={{ textAlign: 'center', padding: '12px 5px' }}><b>{s.quantity}</b></td>
+                      <td style={{ textAlign: 'center', padding: '12px 5px' }}>₹{s.paymentMethod === 'Free' ? 0 : (s.quantity * 70)}</td>
+                      <td style={{ textAlign: 'center', padding: '12px 5px', color: '#64748b', fontSize: '0.85em', wordBreak: 'break-word' }}>{s.remark || "-"}</td>
                     </>
                   )}
                   {activeTab === 'new' && (
-                    <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                    <td style={{ textAlign: 'center', padding: '12px 5px' }}>
                       {s.present ? <span style={{color: '#059669', fontWeight: 'bold'}}>Present</span> : <span style={{color: '#dc2626', fontWeight: 'bold'}}>Absent</span>}
                     </td>
                   )}
