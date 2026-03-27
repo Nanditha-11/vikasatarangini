@@ -118,17 +118,24 @@ function parseStudentsFromExcel(buffer) {
 function buildAttendanceWorkbook({ date, present, absent, newStudents = [], openingStock = 0 }) {
   const wb = XLSX.utils.book_new();
 
-  const toRow = (s, isPresent) => ({
-    "Serial No": s.slNo,
-    "Student Name": s.name,
-    "Father Name": s.fatherName || "",
-    "Age": s.age ?? "",
-    "Phone Number": s.phone,
-    "Status": isPresent ? "Present" : "Absent",
-    "Payment Method": isPresent ? (s.paymentMethod || "Cash") : "N/A",
-    "Quantity": isPresent ? (s.quantity || 0) : 0,
-    "Date": date,
-  });
+  const toRow = (s, isPresent) => {
+    const qty = isPresent ? (s.quantity || 0) : 0;
+    const method = isPresent ? (s.paymentMethod || "Cash") : "N/A";
+    const totalAmount = (method === "Free" || !isPresent) ? 0 : qty * 70;
+
+    return {
+      "Serial No": s.slNo,
+      "Student Name": s.name,
+      "Father Name": s.fatherName || "",
+      "Age": s.age ?? "",
+      "Phone Number": s.phone,
+      "Status": isPresent ? "Present" : "Absent",
+      "Payment Method": method,
+      "Quantity": qty,
+      "Total Amount": totalAmount,
+      "Date": date,
+    };
+  };
 
   const presentRows = present.map(s => toRow(s, true));
   
@@ -136,13 +143,17 @@ function buildAttendanceWorkbook({ date, present, absent, newStudents = [], open
     const r = toRow(s, false);
     delete r["Payment Method"];
     delete r["Quantity"];
+    delete r["Total Amount"];
     return r;
   });
   
   const newRows = newStudents.map(s => {
-    const r = toRow(s, s.present);
-    delete r["Payment Method"];
-    delete r["Quantity"];
+    const r = toRow(s, !!s.present);
+    if (!s.present) {
+      delete r["Payment Method"];
+      delete r["Quantity"];
+      delete r["Total Amount"];
+    }
     return r;
   });
 
