@@ -75,17 +75,17 @@ export function AttendanceHistoryDetailPage() {
             <span style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#065f46' }}>₹{stats.cashAmount + stats.onlineAmount}</span>
           </div>
 
-          <div style={{ background: '#f0f9ff', border: '1px solid #0ea5e9', padding: '12px 20px', borderRadius: '8px', display: 'flex', gap: '20px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7em', color: '#0369a1', fontWeight: 'bold' }}>CASH</div>
-              <div style={{ fontWeight: 'bold' }}>₹{stats.cashAmount} <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({stats.cashQty})</span></div>
+          <div style={{ background: '#f0f9ff', border: '1px solid #0ea5e9', padding: '12px 20px', borderRadius: '8px', display: 'flex', gap: '15px', flex: 1, maxWidth: '600px', justifyContent: 'space-between' }}>
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <div style={{ fontSize: '0.75em', color: '#0369a1', fontWeight: 'bold', textTransform: 'uppercase' }}>CASH</div>
+              <div style={{ fontWeight: 'bold' }}>₹{stats.cashAmount} <span style={{ fontSize: '0.8em', fontWeight: 'normal', color: '#64748b' }}>({stats.cashQty})</span></div>
             </div>
-            <div style={{ textAlign: 'center', borderLeft: '1px solid #bae6fd', paddingLeft: '20px' }}>
-              <div style={{ fontSize: '0.7em', color: '#0369a1', fontWeight: 'bold' }}>ONLINE</div>
-              <div style={{ fontWeight: 'bold' }}>₹{stats.onlineAmount} <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({stats.onlineQty})</span></div>
+            <div style={{ textAlign: 'center', borderLeft: '1px solid #bae6fd', flex: 1 }}>
+              <div style={{ fontSize: '0.75em', color: '#0369a1', fontWeight: 'bold', textTransform: 'uppercase' }}>ONLINE</div>
+              <div style={{ fontWeight: 'bold' }}>₹{stats.onlineAmount} <span style={{ fontSize: '0.8em', fontWeight: 'normal', color: '#64748b' }}>({stats.onlineQty})</span></div>
             </div>
-            <div style={{ textAlign: 'center', borderLeft: '1px solid #bae6fd', paddingLeft: '20px' }}>
-              <div style={{ fontSize: '0.7em', color: '#0369a1', fontWeight: 'bold' }}>FREE</div>
+            <div style={{ textAlign: 'center', borderLeft: '1px solid #bae6fd', flex: 1 }}>
+              <div style={{ fontSize: '0.75em', color: '#0369a1', fontWeight: 'bold', textTransform: 'uppercase' }}>FREE</div>
               <div style={{ fontWeight: 'bold' }}>{stats.freeQty} <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>qty</span></div>
             </div>
           </div>
@@ -126,51 +126,59 @@ export function AttendanceHistoryDetailPage() {
         )}
 
         <div className="tableWrap">
-          <table style={{ width: '100%', tableLayout: 'auto' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
-                <th style={{ width: 80, textAlign: 'center' }}>ID</th>
-                <th style={{ textAlign: 'left', paddingLeft: '30px' }}>Name</th>
-                <th>Father Name</th>
-                <th style={{ width: 80, textAlign: 'center' }}>Age</th>
-                <th style={{ textAlign: 'center' }}>Phone</th>
-                {activeTab === 'present' && (
+              <tr style={{ background: '#f1f5f9' }}>
+                <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>ID</th>
+                <th style={{ width: '25%', textAlign: 'left', padding: '12px 15px' }}>Name</th>
+                <th style={{ width: '20%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
+                <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>Age</th>
+                <th style={{ width: '15%', textAlign: 'center', padding: '12px 8px' }}>Phone</th>
+                {activeTab === 'present' ? (
                   <>
-                    <th style={{ width: 120, textAlign: 'center' }}>Method</th>
-                    <th style={{ width: 80, textAlign: 'center' }}>Qty</th>
-                    <th style={{ width: 100, textAlign: 'center' }}>Amount</th>
+                    <th style={{ width: '12%', textAlign: 'center', padding: '12px 8px' }}>Method</th>
+                    <th style={{ width: '6%', textAlign: 'center', padding: '12px 8px' }}>Qty</th>
+                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Amount</th>
                   </>
-                )}
-                {activeTab === 'new' && <th style={{ width: 120, textAlign: 'center' }}>Status</th>}
+                ) : activeTab === 'new' ? (
+                  <th style={{ width: '24%', textAlign: 'center', padding: '12px 8px' }}>Status</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
               {list.map((s) => (
-                <tr key={s.slNo}>
-                  <td style={{ fontWeight: 'bold', textAlign: 'center' }}>{s.slNo}</td>
+                <tr key={s.slNo} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ fontWeight: 'bold', textAlign: 'center', padding: '12px 8px' }}>{s.slNo}</td>
                   <td 
                     style={{ 
-                      paddingLeft: '30px', 
+                      padding: '12px 15px', 
                       color: '#2563eb', 
                       cursor: 'pointer',
-                      textDecoration: 'underline'
+                      textDecoration: 'underline',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }}
                     onClick={() => setHistoryStudent(s)}
                   >
                     {s.name}
                   </td>
-                  <td>{s.fatherName || "-"}</td>
-                  <td style={{ textAlign: 'center' }}>{s.age || "-"}</td>
-                  <td style={{ textAlign: 'center' }}>{s.phone || "-"}</td>
+                  <td style={{ padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.fatherName || "-"}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 8px' }}>{s.age || "-"}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 8px' }}>{s.phone || "-"}</td>
                   {activeTab === 'present' && (
                     <>
-                      <td style={{ textAlign: 'center' }}><span className="pill" style={{ background: '#f3f4f6' }}>{s.paymentMethod}</span></td>
-                      <td style={{ textAlign: 'center' }}><b>{s.quantity}</b></td>
-                      <td style={{ textAlign: 'center' }}>₹{s.paymentMethod === 'Free' ? 0 : (s.quantity * 70)}</td>
+                      <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                        <span className="pill" style={{ background: '#f3f4f6', fontSize: '0.85em' }}>{s.paymentMethod}</span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 8px' }}><b>{s.quantity}</b></td>
+                      <td style={{ textAlign: 'center', padding: '12px 8px' }}>₹{s.paymentMethod === 'Free' ? 0 : (s.quantity * 70)}</td>
                     </>
                   )}
                   {activeTab === 'new' && (
-                    <td style={{ textAlign: 'center' }}>{s.present ? <span style={{color: '#059669'}}>Present</span> : <span style={{color: '#dc2626'}}>Absent</span>}</td>
+                    <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                      {s.present ? <span style={{color: '#059669', fontWeight: 'bold'}}>Present</span> : <span style={{color: '#dc2626', fontWeight: 'bold'}}>Absent</span>}
+                    </td>
                   )}
                 </tr>
               ))}
