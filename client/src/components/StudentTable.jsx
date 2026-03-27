@@ -10,9 +10,15 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
   };
   
   const visibleRows = useMemo(() => {
+    // 1. Initial filter by presence
     const base = viewMode === "marking" ? rows.filter(r => !r.present) : rows.filter(r => r.present);
-    if (!q) return base;
-    return base.filter(
+    
+    // 2. Numerical Sort
+    const sorted = [...base].sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
+    
+    // 3. Search filter
+    if (!q) return sorted;
+    return sorted.filter(
       (r) =>
         String(r.slNo || "").toLowerCase().includes(q) ||
         String(r.phone || "").toLowerCase().includes(q) ||

@@ -31,8 +31,7 @@ studentsRouter.get("/", async (req, res) => {
   try {
     const Student = getStudentModel(req);
     // In multi-db, we don't need to filter by createdBy as the DB is already isolated
-    const students = await Student.find({}).lean();
-    students.sort((a, b) => Number(a.slNo) - Number(b.slNo));
+    const students = await Student.find({}).sort({ slNo: 1 }).lean();
     res.json({ students });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -51,10 +50,8 @@ studentsRouter.post("/upload", upload.single("file"), async (req, res) => {
     let nextId = parseInt(await getNextSlNo(req), 10);
 
     const ops = parsed.map((s) => {
-      let slNo = s.slNo;
-      if (!slNo) {
-        slNo = String(nextId++);
-      }
+      let slNo = s.slNo ? parseInt(s.slNo, 10) : nextId++;
+      if (isNaN(slNo)) slNo = nextId++;
       return {
         updateOne: {
           filter: { slNo }, // No createdBy needed
@@ -93,7 +90,8 @@ studentsRouter.post("/", async (req, res) => {
     const { district, place } = req.user;
     
     let { slNo, name, fatherName = "", age = null, phone } = req.body || {};
-
+    const numericSlNo = slNo ? parseInt(slNo, 10) : parseInt(await getNextSlNo(req), 10);
+    
     if (!name || !phone) {
       return res.status(400).json({ error: "name and phone are required" });
     }
@@ -112,24 +110,18 @@ studentsRouter.post("/", async (req, res) => {
       name: { $regex: new RegExp(`^${escapedName}$`, "i") },
       fatherName: { $regex: new RegExp(`^${escapedFatherName}$`, "i") },
       phone: normalizedPhone,
-      slNo: { $ne: String(slNo || "").trim() }
+      slNo: { $ne: numericSlNo }
     }).lean();
 
     if (isDuplicate) {
       return res.status(400).json({ error: "Student already exists with these exact details" });
     }
 
-    if (!slNo) {
-      slNo = await getNextSlNo(req);
-    }
-
-    const normalizedSlNo = String(slNo).trim();
-
     const doc = await Student.findOneAndUpdate(
-      { slNo: normalizedSlNo },
+      { slNo: numericSlNo },
       {
         $set: {
-          slNo: normalizedSlNo,
+          slNo: numericSlNo,
           name: String(name).trim(),
           fatherName: String(fatherName || "").trim(),
           age: Number.isFinite(Number(age)) ? Number(age) : null,
@@ -138,7 +130,7 @@ studentsRouter.post("/", async (req, res) => {
           place
         },
       },
-      { new: true, upsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean();
 
     return res.json({ student: doc });

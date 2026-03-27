@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 // Define Schemas once
 const StudentSchema = new mongoose.Schema({
-  slNo: { type: String, required: true }, // Scoped slNo within tenant
+  slNo: { type: Number, required: true }, // Scoped slNo within tenant
   name: { type: String, required: true },
   fatherName: String,
   age: Number,
@@ -19,7 +19,7 @@ const AttendanceSchema = new mongoose.Schema({
   type: { type: String, enum: ["student", "metadata"], required: true },
   
   // Fields for Student type
-  slNo: { type: String },
+  slNo: { type: Number },
   name: { type: String },
   fatherName: { type: String },
   phone: { type: String },

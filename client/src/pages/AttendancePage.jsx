@@ -126,8 +126,8 @@ export function AttendancePage() {
   };
 
   const handleDownloadPresent = () => {
-    const baseUrl = window.location.origin === "http://localhost:5173" ? "http://localhost:5050" : "";
-    window.open(`${baseUrl}/api/attendance/${date}/download?presentOnly=true&token=${localStorage.getItem("vt_token")}`, "_blank");
+    const apiBase = import.meta.env.VITE_API_BASE || "";
+    window.open(`${apiBase}/api/attendance/${date}/download?presentOnly=true&token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
   };
 
 
@@ -298,16 +298,16 @@ export function AttendancePage() {
           ) : viewMode === 'summary' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="row" style={{ justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  className="btn primary"
-                  style={{ background: '#10b981', borderColor: '#10b981' }}
-                  onClick={() => {
-                    const baseUrl = window.location.origin === "http://localhost:5173" ? "http://localhost:5050" : "";
-                    window.open(`${baseUrl}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
-                  }}
-                >
-                  📥 Download Attendance Excel
-                </button>
+  <button
+    className="btn primary"
+    style={{ background: '#10b981', borderColor: '#10b981' }}
+    onClick={() => {
+      const apiBase = import.meta.env.VITE_API_BASE || "";
+      window.open(`${apiBase}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
+    }}
+  >
+    📥 Download Attendance Excel
+  </button>
               </div>
 
               <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>

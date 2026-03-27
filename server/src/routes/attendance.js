@@ -21,20 +21,17 @@ function normalizeDateParam(dateStr) {
 attendanceRouter.get("/:date", async (req, res) => {
   const { Student, Attendance } = req.tenantModels;
   const { username } = req.user;
-  const date = normalizeDateParam(req.params.date);
-  if (!date) return res.status(400).json({ error: "Invalid date" });
-
-  const startOfDay = dayjs(date).startOf('day').toDate();
-  const endOfDay = dayjs(date).endOf('day').toDate();
-
-  // In multi-db, we don't need to filter by createdBy as the DB is already isolated
   const normalizedDate = normalizeDateParam(req.params.date);
-  
+  if (!normalizedDate) return res.status(400).json({ error: "Invalid date" });
+
+  const startOfDay = dayjs(normalizedDate).startOf('day').subtract(1, 'hour').toDate();
+  const endOfDay = dayjs(normalizedDate).endOf('day').add(1, 'hour').toDate();
+
   // 1. Get current day data
   const [studentsRaw, attendanceRaw, newStudentsRaw] = await Promise.all([
-    Student.find({}).lean(),
-    Attendance.find({ date: normalizedDate }).lean(),
-    Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+    Student.find({}).sort({ slNo: 1 }).lean(),
+    Attendance.find({ date: normalizedDate }).sort({ slNo: 1 }).lean(),
+    Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).sort({ slNo: 1 }).lean()
   ]);
 
   const metadata = attendanceRaw.find(d => d.type === "metadata") || {};
@@ -71,14 +68,14 @@ attendanceRouter.get("/:date", async (req, res) => {
       paymentMethod: p?.paymentMethod || 'Cash',
       remark: p?.remark || ''
     };
-  }).sort((a, b) => Number(a.slNo) - Number(b.slNo));
+  }).sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
 
   const present = students.filter(s => s.present);
   const absent = students.filter(s => !s.present);
   const newStudents = newStudentsRaw.map(s => ({ 
     ...s, 
     present: presentMap.has(s.slNo) 
-  })).sort((a, b) => Number(a.slNo) - Number(b.slNo));
+  })).sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
 
   const admin = await Admin.findOne({ username }).lean();
   const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
@@ -111,8 +108,8 @@ attendanceRouter.post("/:date/save", async (req, res) => {
 
   const schema = z.object({
     presentStudents: z.array(z.object({
-      slNo: z.string().min(1),
-      paymentMethod: z.enum(["Cash", "Online", "Free"]).default("Cash"),
+      slNo: z.union([z.string(), z.number()]),
+      paymentMethod: z.enum(["Cash", "Online", "Free", "Online Payment"]).default("Cash"),
       quantity: z.number().int().min(0).default(0),
       remark: z.string().optional().default(""),
     })).default([]),
@@ -124,14 +121,15 @@ attendanceRouter.post("/:date/save", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
   const allStudents = await Student.find({}).lean();
-  const studentMap = new Map(allStudents.map(s => [s.slNo, s]));
+  const studentMap = new Map(allStudents.map(s => [String(s.slNo), s]));
   
   const enrichedPresent = parsed.data.presentStudents.map(p => {
-    const student = studentMap.get(p.slNo) || {};
+    const slNoStr = String(p.slNo);
+    const student = studentMap.get(slNoStr) || {};
     return {
       date,
       type: "student",
-      slNo: p.slNo,
+      slNo: Number(p.slNo),
       name: student.name || "",
       fatherName: student.fatherName || "",
       phone: student.phone || "",
@@ -182,7 +180,7 @@ attendanceRouter.get("/list/history", async (req, res) => {
     ]);
 
     const history = await Promise.all(allMetadata.map(async (meta) => {
-      const studentDocs = await Attendance.find({ date: meta.date, type: "student" }).lean();
+      const studentDocs = await Attendance.find({ date: meta.date, type: "student" }).sort({ slNo: 1 }).lean();
       
       const presentCount = studentDocs.length;
       const totalSold = studentDocs.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
@@ -223,8 +221,8 @@ attendanceRouter.get("/:date/download", async (req, res) => {
     if (!normalizedDate) return res.status(400).json({ error: "Invalid date" });
 
     const [studentsRaw, attendanceRaw] = await Promise.all([
-      Student.find({}).lean(),
-      Attendance.find({ date: normalizedDate }).lean()
+      Student.find({}).sort({ slNo: 1 }).lean(),
+      Attendance.find({ date: normalizedDate }).sort({ slNo: 1 }).lean()
     ]);
 
     const metadata = attendanceRaw.find(d => d.type === "metadata") || {};
@@ -246,8 +244,9 @@ attendanceRouter.get("/:date/download", async (req, res) => {
     const absent = students.filter(s => !s.present);
     
     // For "New Students" sheet, we just filter current day registrations
-    const startOfDay = dayjs(normalizedDate).startOf('day').toDate();
-    const endOfDay = dayjs(normalizedDate).endOf('day').toDate();
+    // For "New Students" sheet, we filter students created on that day
+    const startOfDay = dayjs(normalizedDate).startOf('day').subtract(1, 'hour').toDate();
+    const endOfDay = dayjs(normalizedDate).endOf('day').add(1, 'hour').toDate();
     const newStudentsRaw = await Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean();
     const newStudentsWithStatus = newStudentsRaw.map(s => {
       const p = presentMap.get(s.slNo);
@@ -267,7 +266,7 @@ attendanceRouter.get("/:date/download", async (req, res) => {
       newStudents: newStudentsWithStatus,
       openingStock: metadata.openingStock || 0
     });
-    const filename = `attendance_${date}.xlsx`;
+    const filename = `attendance_${normalizedDate}.xlsx`;
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

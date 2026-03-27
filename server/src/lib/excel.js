@@ -164,7 +164,7 @@ function buildAttendanceWorkbook({ date, present, absent, newStudents = [], open
   XLSX.utils.book_append_sheet(wb, presentSheet, "Present List");
   XLSX.utils.book_append_sheet(wb, absentSheet, "Absent List");
   if (newStudents.length > 0) {
-    XLSX.utils.book_append_sheet(wb, newSheet, "New Students Only");
+    XLSX.utils.book_append_sheet(wb, newSheet, "New Students");
   }
 
   return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

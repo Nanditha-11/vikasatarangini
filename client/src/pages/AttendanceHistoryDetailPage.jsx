@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
@@ -21,9 +21,45 @@ export function AttendanceHistoryDetailPage() {
       .finally(() => setLoading(false));
   }, [date]);
 
+  const stats = useMemo(() => {
+    if (!data || !data.present) return { cashQty: 0, cashAmount: 0, onlineQty: 0, onlineAmount: 0, freeQty: 0 };
+    return data.present.reduce((acc, p) => {
+      const qty = Number(p.quantity) || 0;
+      const isOnline = p.paymentMethod === 'Online' || p.paymentMethod === 'Online Payment';
+      const isCash = p.paymentMethod === 'Cash';
+      const isFree = p.paymentMethod === 'Free';
+
+      if (isCash) { acc.cashQty += qty; acc.cashAmount += qty * 70; }
+      else if (isOnline) { acc.onlineQty += qty; acc.onlineAmount += qty * 70; }
+      else if (isFree) { acc.freeQty += qty; }
+      
+      return acc;
+    }, { cashQty: 0, cashAmount: 0, onlineQty: 0, onlineAmount: 0, freeQty: 0 });
+  }, [data]);
+
+  const list = useMemo(() => {
+    if (!data) return [];
+    let baseList = activeTab === "present" ? data.present : activeTab === "absent" ? data.absent : data.newStudents;
+    if (!baseList) return [];
+    
+    // Payment filter for Present tab
+    if (activeTab === "present") {
+      baseList = baseList.filter(s => {
+        if (paymentFilter === 'all') return true;
+        if (paymentFilter === 'cash') return s.paymentMethod === 'Cash';
+        if (paymentFilter === 'online') return s.paymentMethod === 'Online' || s.paymentMethod === 'Online Payment';
+        if (paymentFilter === 'free') return s.paymentMethod === 'Free';
+        return true;
+      });
+    }
+
+    // Always Sort numerically
+    return [...baseList].sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
+  }, [activeTab, paymentFilter, data]);
+
   if (loading) {
     return (
-      <Layout title={`History: ${date.split('-').reverse().join('-')}`}>
+      <Layout title={`History: ${date?.split('-').reverse().join('-') || ''}`}>
         <div className="card" style={{ textAlign: 'center', padding: '50px' }}>Loading historical data...</div>
       </Layout>
     );
@@ -31,34 +67,11 @@ export function AttendanceHistoryDetailPage() {
 
   if (!data) {
     return (
-      <Layout title={`History: ${date.split('-').reverse().join('-')}`}>
+      <Layout title={`History: ${date?.split('-').reverse().join('-') || ''}`}>
         <div className="card" style={{ textAlign: 'center', padding: '50px', color: '#dc2626' }}>Could not load data for this date.</div>
       </Layout>
     );
   }
-
-  const stats = data.present.reduce((acc, p) => {
-    const qty = Number(p.quantity) || 0;
-    const isOnline = p.paymentMethod === 'Online' || p.paymentMethod === 'Online Payment';
-    const isCash = p.paymentMethod === 'Cash';
-    const isFree = p.paymentMethod === 'Free';
-
-    if (isCash) { acc.cashQty += qty; acc.cashAmount += qty * 70; }
-    else if (isOnline) { acc.onlineQty += qty; acc.onlineAmount += qty * 70; }
-    else if (isFree) { acc.freeQty += qty; }
-    
-    return acc;
-  }, { cashQty: 0, cashAmount: 0, onlineQty: 0, onlineAmount: 0, freeQty: 0 });
-
-  const rawList = activeTab === "present" ? data.present : activeTab === "absent" ? data.absent : data.newStudents;
-  
-  const list = activeTab === "present" ? rawList.filter(s => {
-    if (paymentFilter === 'all') return true;
-    if (paymentFilter === 'cash') return s.paymentMethod === 'Cash';
-    if (paymentFilter === 'online') return s.paymentMethod === 'Online' || s.paymentMethod === 'Online Payment';
-    if (paymentFilter === 'free') return s.paymentMethod === 'Free';
-    return true;
-  }) : rawList;
 
   return (
     <Layout title={`Attendance Report: ${date.split('-').reverse().join('-')}`}>

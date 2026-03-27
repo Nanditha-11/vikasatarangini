@@ -127,12 +127,20 @@ export function ModifyStudentsPage() {
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter(s => 
-      s.slNo.toLowerCase().includes(q) ||
-      s.name.toLowerCase().includes(q) ||
-      (s.fatherName && s.fatherName.toLowerCase().includes(q)) ||
-      s.phone.includes(q)
+    
+    // Always sort by SL No numerically first
+    const sorted = [...students].sort((a, b) => {
+      const nA = parseInt(a.slNo, 10) || 0;
+      const nB = parseInt(b.slNo, 10) || 0;
+      return nA - nB;
+    });
+
+    if (!q) return sorted;
+    return sorted.filter(s => 
+      String(s.slNo).toLowerCase().includes(q) ||
+      String(s.name || "").toLowerCase().includes(q) ||
+      String(s.fatherName || "").toLowerCase().includes(q) ||
+      String(s.phone || "").includes(q)
     );
   }, [students, filter]);
 
