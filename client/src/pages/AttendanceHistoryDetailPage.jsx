@@ -130,15 +130,16 @@ export function AttendanceHistoryDetailPage() {
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
                 <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>ID</th>
-                <th style={{ width: '25%', textAlign: 'left', padding: '12px 15px' }}>Name</th>
-                <th style={{ width: '20%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
-                <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>Age</th>
-                <th style={{ width: '15%', textAlign: 'center', padding: '12px 8px' }}>Phone</th>
+                <th style={{ width: '22%', textAlign: 'left', padding: '12px 15px' }}>Name</th>
+                <th style={{ width: '18%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
+                <th style={{ width: '7%', textAlign: 'center', padding: '12px 8px' }}>Age</th>
+                <th style={{ width: '14%', textAlign: 'center', padding: '12px 8px' }}>Phone</th>
                 {activeTab === 'present' ? (
                   <>
-                    <th style={{ width: '12%', textAlign: 'center', padding: '12px 8px' }}>Method</th>
-                    <th style={{ width: '6%', textAlign: 'center', padding: '12px 8px' }}>Qty</th>
-                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Amount</th>
+                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Method</th>
+                    <th style={{ width: '5%', textAlign: 'center', padding: '12px 8px' }}>Qty</th>
+                    <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>Amount</th>
+                    <th style={{ width: '10%', textAlign: 'center', padding: '12px 8px' }}>Remarks</th>
                   </>
                 ) : activeTab === 'new' ? (
                   <th style={{ width: '24%', textAlign: 'center', padding: '12px 8px' }}>Status</th>
@@ -173,6 +174,7 @@ export function AttendanceHistoryDetailPage() {
                       </td>
                       <td style={{ textAlign: 'center', padding: '12px 8px' }}><b>{s.quantity}</b></td>
                       <td style={{ textAlign: 'center', padding: '12px 8px' }}>₹{s.paymentMethod === 'Free' ? 0 : (s.quantity * 70)}</td>
+                      <td style={{ textAlign: 'center', padding: '12px 8px', color: '#64748b', fontSize: '0.85em' }}>{s.remark || "-"}</td>
                     </>
                   )}
                   {activeTab === 'new' && (
