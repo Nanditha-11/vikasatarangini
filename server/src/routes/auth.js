@@ -5,9 +5,42 @@ const Admin = require("../models/Admin");
 
 const authRouter = express.Router();
 
-// Memory store for OTPs (or use DB)
-let activeOTP = null;
-let otpExpiry = null;
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
+    pass: process.env.GMAIL_PASS || "ykod qvle rvyq auih"
+  }
+});
+
+// Memory store for OTPs: email/identifier -> { otp, expiry }
+const otpStore = new Map();
+
+authRouter.post("/send-register-otp", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
+  otpStore.set(email, {
+    otp: String(code),
+    expiry: Date.now() + 10 * 60 * 1000 // 10 mins
+  });
+
+  const mailOptions = {
+    from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
+    to: email,
+    subject: "Vikasa Tarangini - Registration OTP",
+    text: `Your 4-digit OTP for registration is: ${code}. It will expire in 10 minutes.`
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ ok: true, message: "OTP sent to your email" });
+  } catch (err) {
+    console.error("Mail error:", err);
+    res.status(500).json({ error: "Failed to send email" });
+  }
+});
 
 authRouter.get("/districts", async (req, res) => {
   try {
@@ -99,22 +132,16 @@ authRouter.post("/forgot-password", async (req, res) => {
   }
 
   const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
-  activeOTP = String(code);
-  otpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-      pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw"
-    }
+  otpStore.set(email, {
+    otp: String(code),
+    expiry: Date.now() + 10 * 60 * 1000 // 10 mins
   });
 
   const mailOptions = {
     from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
     to: email,
     subject: "Admin Password Reset - OTP",
-    text: `Your 4-digit OTP for resetting the password is: ${activeOTP}. It will expire in 10 minutes.`
+    text: `Your 4-digit OTP for resetting the password is: ${code}. It will expire in 10 minutes.`
   };
 
   console.log(`[AUTH] Sending mail FROM: ${process.env.GMAIL_USER || "swarnamrutham3@gmail.com"}`);
@@ -137,8 +164,11 @@ function isPasswordComplex(password) {
 }
 
 authRouter.post("/verify-otp", async (req, res) => {
-  const { otp } = req.body || {};
-  if (!otp || activeOTP !== String(otp) || Date.now() > otpExpiry) {
+  const { email, otp } = req.body || {};
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+  
+  const record = otpStore.get(email);
+  if (!record || record.otp !== String(otp) || Date.now() > record.expiry) {
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
   res.json({ ok: true });
@@ -148,7 +178,8 @@ authRouter.post("/reset-password", async (req, res) => {
   const { email, otp, newPassword } = req.body || {};
   if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
 
-  if (activeOTP !== String(otp) || Date.now() > otpExpiry) {
+  const record = otpStore.get(email);
+  if (!record || record.otp !== String(otp) || Date.now() > record.expiry) {
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
 
@@ -173,8 +204,7 @@ authRouter.post("/reset-password", async (req, res) => {
     }
 
     // clear OTP
-    activeOTP = null;
-    otpExpiry = null;
+    otpStore.delete(email);
 
     res.json({ ok: true });
   } catch (err) {
@@ -184,7 +214,14 @@ authRouter.post("/reset-password", async (req, res) => {
 
 authRouter.post("/register", async (req, res) => {
   try {
-    let { username, password, email, district, place, whatsappLink } = req.body;
+    let { username, password, email, district, place, whatsappLink, otp } = req.body;
+    
+    // Verify OTP one last time during final registration
+    const record = otpStore.get(email);
+    if (!record || record.otp !== String(otp) || Date.now() > record.expiry) {
+      return res.status(400).json({ error: "Invalid or expired OTP. Please verify your email again." });
+    }
+
     username = username?.trim();
     if (username) {
       username = username.charAt(0).toUpperCase() + username.slice(1);
@@ -232,15 +269,12 @@ authRouter.post("/register", async (req, res) => {
 
     await admin.save();
 
+    // Clear OTP after successful registration
+    otpStore.delete(email);
+
     // Notify Master Admin via Email
     try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-          pass: process.env.GMAIL_PASS || "cljt mwaq ktob dodw"
-        }
-      });
+
 
       const adminMailOptions = {
         from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
@@ -261,7 +295,7 @@ authRouter.post("/register", async (req, res) => {
       // Don't fail the registration if only the email fails
     }
 
-    res.status(201).json({ message: "Registration successful. Please wait for Master Admin approval." });
+    res.status(201).json({ message: "Registration successful. Please wait for Master Admin approval. Contact swarnamrutham3@gmail.com for more details." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

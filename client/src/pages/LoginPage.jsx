@@ -24,6 +24,7 @@ export function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
@@ -119,7 +120,7 @@ export function LoginPage() {
       await apiFetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp: otp.join("") }),
+        body: JSON.stringify({ email, otp: otp.join("") }),
       });
       setView("reset");
     } catch (err) {
@@ -189,33 +190,64 @@ export function LoginPage() {
         <img src="/image1.jpg" alt="Left side" className="login-side-image" />
         <div className="login-card-container">
           <div className="card">
-            <h2 style={{ textAlign: "center", marginBottom: 10 }}>Verify OTP</h2>
-            <p style={{ textAlign: "center", color: "#64748b", marginBottom: 20 }}>Enter the 4-digit code sent to your email</p>
-            {error && <div className="error">{error}</div>}
+            <h2 style={{ textAlign: 'center', color: '#0d2866', marginBottom: '10px', fontSize: '1.8em', fontWeight: 'bold' }}>Verify OTP</h2>
+            <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '30px' }}>Enter the 4-digit code sent to your email</p>
+            
             <form onSubmit={onVerifyOtp}>
-              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '20px' }}>
                 {otp.map((digit, i) => (
                   <input
                     key={i}
                     ref={otpRefs[i]}
-                    className="input"
-                    style={{ width: 50, textAlign: "center", fontSize: 24, fontWeight: "bold" }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => {
                       const val = e.target.value.replace(/[^0-9]/g, "");
-                      const newOtp = [...otp];
-                      newOtp[i] = val;
-                      setOtp(newOtp);
-                      if (val && i < 3) otpRefs[i + 1].current.focus();
+                      if (val.length <= 1) {
+                        const newOtp = [...otp];
+                        newOtp[i] = val;
+                        setOtp(newOtp);
+                        if (val && i < 3) {
+                          otpRefs[i + 1].current.focus();
+                        }
+                      }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs[i - 1].current.focus();
+                      if (e.key === "Backspace" && !otp[i] && i > 0) {
+                        otpRefs[i - 1].current.focus();
+                      }
                     }}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      fontSize: '24px',
+                      textAlign: 'center',
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0',
+                      outline: 'none',
+                      background: '#f8fafc',
+                      color: '#0d2866',
+                      fontWeight: 'bold'
+                    }}
+                    required
+                    autoFocus={i === 0}
                   />
                 ))}
               </div>
-              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px' }}>Verify OTP</button>
+
+              <div style={{ height: '30px', textAlign: 'center' }}>
+                 {error && <div style={{ color: '#be123c', fontWeight: 'bold', fontSize: '0.9em' }}>{error}</div>}
+              </div>
+
+              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '16px', marginTop: '10px', fontSize: '1.1em', fontWeight: 'bold' }}>
+                {busy ? "Verifying..." : "Verify OTP"}
+              </button>
+              <button type="button" className="btn" onClick={() => setView("forgot")} style={{ width: "100%", marginTop: 15, background: 'none', border: 'none', color: '#0d2866', fontWeight: 'bold' }}>
+                Change Email
+              </button>
             </form>
           </div>
         </div>
@@ -230,96 +262,75 @@ export function LoginPage() {
         <img src="/image1.jpg" alt="Left side" className="login-side-image" />
         <div className="login-card-container">
           <div className="card">
-            <h2 style={{ textAlign: "center", marginBottom: 20 }}>New Password</h2>
-            {error && <div className="error">{error}</div>}
+            <h2 style={{ textAlign: 'center', color: '#0d2866', marginBottom: '20px', fontSize: '1.8em', fontWeight: 'bold' }}>New Password</h2>
+            {error && <div className="error" style={{ marginBottom: '20px' }}>{error}</div>}
+            
             <form onSubmit={onReset}>
-              <div className="field">
+              <div className="field" style={{ position: 'relative', marginBottom: '20px' }}>
                 <label>New Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    className="input" 
-                    type={showPassword ? "text" : "password"} 
-                    value={newPassword} 
-                    onChange={(e) => setNewPassword(e.target.value)} 
-                    required 
-                    style={{ paddingRight: '45px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b',
-                      padding: '5px'
-                    }}
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
+                 <input 
+                  className="input" 
+                  type={showPassword ? "text" : "password"} 
+                  value={newPassword} 
+                  onChange={(e) => setNewPassword(e.target.value)} 
+                  placeholder="••••••••"
+                  required 
+                />
+                <button
+                  type="button"
+                  onMouseEnter={() => setShowPassword(true)}
+                  onMouseLeave={() => setShowPassword(false)}
+                  style={{ position: 'absolute', right: '10px', bottom: '12px', background: 'none', border: 'none', cursor: 'pointer', outline: 'none', color: showPassword ? '#0d2866' : '#94a3b8' }}
+                >
+                  {showPassword ? (
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
               </div>
-              <div className="field">
+
+              <div className="field" style={{ position: 'relative', marginBottom: '10px' }}>
                 <label>Confirm Password</label>
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <input 
-                    className="input" 
-                    type={showPassword ? "text" : "password"} 
-                    value={confirmPassword} 
-                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                    required 
-                    style={{ paddingRight: '45px', width: '100%', boxSizing: 'border-box' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b',
-                      padding: '5px'
-                    }}
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
+                <input 
+                  className="input" 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)} 
+                  placeholder="••••••••"
+                  required 
+                />
+                <button
+                  type="button"
+                  onMouseEnter={() => setShowConfirmPassword(true)}
+                  onMouseLeave={() => setShowConfirmPassword(false)}
+                  style={{ position: 'absolute', right: '10px', bottom: '12px', background: 'none', border: 'none', cursor: 'pointer', outline: 'none', color: showConfirmPassword ? '#0d2866' : '#94a3b8' }}
+                >
+                  {showConfirmPassword ? (
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
               </div>
-              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '14px' }}>Update Password</button>
+
+              <div style={{ height: '30px', textAlign: 'center' }}>
+                {(() => {
+                  if (!newPassword) return null;
+                  if (newPassword.length < 8) return <p style={{ color: '#be123c', fontSize: '0.9em', fontWeight: 'bold' }}>Password must be at least 8 characters</p>;
+                  if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^a-zA-Z0-9]/.test(newPassword)) {
+                    return <p style={{ color: '#be123c', fontSize: '0.9em', fontWeight: 'bold' }}>Must contain letters, numbers & symbols</p>;
+                  }
+                  if (confirmPassword && newPassword !== confirmPassword) {
+                    return <p style={{ color: '#be123c', fontSize: '0.9em', fontWeight: 'bold' }}>Passwords do not match</p>;
+                  }
+                  return null;
+                })()}
+              </div>
+
+              <button className="btn primary" disabled={busy} style={{ width: "100%", padding: '16px', marginTop: '10px', fontWeight: 'bold' }}>
+                {busy ? "Updating..." : "Update Password"}
+              </button>
             </form>
           </div>
         </div>
