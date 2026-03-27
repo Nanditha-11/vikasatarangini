@@ -85,42 +85,14 @@ export function AttendanceHeader({
                 )}
               </div>
 
-              {user.role === 'master' ? (
-                <div className="row" style={{ gap: '12px', marginTop: '4px' }}>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <select 
-                      className="input" 
-                      style={{ padding: '6px 12px', fontSize: '0.9em', minWidth: '150px' }}
-                      value={viewDistrict} 
-                      onChange={e => setViewDistrict(e.target.value)}
-                    >
-                      {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <select 
-                      className="input" 
-                      style={{ padding: '6px 12px', fontSize: '0.9em', minWidth: '150px' }}
-                      value={viewPlace} 
-                      onChange={e => setViewPlace(e.target.value)}
-                      disabled={places.length === 0}
-                    >
-                      <option value="">-- Select Place --</option>
-                      {places.map(p => {
-                        const cap = p.charAt(0).toUpperCase() + p.slice(1);
-                        return <option key={p} value={p}>{cap}</option>;
-                      })}
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span style={{ fontSize: '1.1em', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{user.district}</span>
-                  <h2 style={{ margin: 0, fontSize: '2.2em', fontStyle: 'italic', color: '#0d2866', lineHeight: '1.1' }}>
-                    {user.place}
-                  </h2>
-                </>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '1.1em', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {user.role === 'master' ? viewDistrict : user.district}
+                </span>
+                <h2 style={{ margin: 0, fontSize: '2.2em', fontStyle: 'italic', color: '#0d2866', lineHeight: '1.1' }}>
+                  {user.role === 'master' ? viewPlace : user.place}
+                </h2>
+              </div>
             </>
           ) : (
             <h2 style={{ margin: 0, fontSize: '1.8em', fontStyle: 'italic', color: '#0d2866' }}>Home</h2>

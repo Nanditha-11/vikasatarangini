@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode, deletingSlNo, setDeletingSlNo, deletePass, setDeletePass }) {
+export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode, deletingSlNo, setDeletingSlNo, deletePass, setDeletePass, isMaster }) {
   const navigate = useNavigate();
   const q = filter.trim().toLowerCase();
 
@@ -93,15 +93,20 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                       <button className="btn primary" style={{ display: 'block', width: '100%', marginBottom: '8px' }} onClick={() => onViewHistory(r)}>
                         View Details
                       </button>
-                      {r.present && onModifyClick && (
-                        <button className="btn" style={{ borderColor: '#2563eb', color: '#2563eb', width: '100%', marginBottom: '8px' }} onClick={() => onModifyClick(r)}>
-                            Modify Details
-                        </button>
-                      )}
-                      {!r.present && (
-                        <button className="btn" style={{ borderColor: '#059669', color: '#059669', width: '100%', marginBottom: '8px' }} onClick={() => onMarkClick(r)}>
-                            Mark Present
-                        </button>
+                      
+                      {!isMaster && (
+                        <>
+                          {r.present && onModifyClick && (
+                            <button className="btn" style={{ borderColor: '#2563eb', color: '#2563eb', width: '100%', marginBottom: '8px' }} onClick={() => onModifyClick(r)}>
+                                Modify Details
+                            </button>
+                          )}
+                          {!r.present && (
+                            <button className="btn" style={{ borderColor: '#059669', color: '#059669', width: '100%', marginBottom: '8px' }} onClick={() => onMarkClick(r)}>
+                                Mark Present
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 
@@ -83,6 +84,11 @@ function EditModal({ student, onClose, onSave, busy, error }) {
 }
 
 export function ModifyStudentsPage() {
+  const [searchParams] = useSearchParams();
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isMaster = user?.role === "master";
+
   const [students, setStudents] = useState([]);
   const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState(false);
@@ -96,8 +102,13 @@ export function ModifyStudentsPage() {
   const loadStudents = async () => {
     setBusy(true);
     try {
-      const data = await apiFetch("/api/students");
-      setStudents(data.students);
+      const d = searchParams.get("district");
+      const p = searchParams.get("place");
+      let url = "/api/students";
+      if (d && p) url += `?district=${encodeURIComponent(d)}&place=${encodeURIComponent(p)}`;
+      
+      const data = await apiFetch(url);
+      setStudents(data.students || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -146,6 +157,12 @@ export function ModifyStudentsPage() {
 
   return (
     <Layout>
+      {isMaster && (
+        <div className="card" style={{ background: '#fef3c7', color: '#92400e', textAlign: 'center', padding: '10px', marginBottom: '15px' }}>
+          🔒 READ-ONLY AUDIT MODE: You are viewing student list for {searchParams.get("place")?.toUpperCase() || "MAIN"}. Modification is disabled.
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>All Students ({students.length})</h2>
@@ -186,10 +203,11 @@ export function ModifyStudentsPage() {
                 <td style={{ textAlign: 'center' }}>
                   <button 
                     className="btn" 
-                    style={{ padding: '5px 15px', color: '#0072ff', borderColor: '#0072ff' }} 
-                    onClick={() => setEditingStudent(s)}
+                    style={{ padding: '5px 15px', color: isMaster ? '#94a3b8' : '#0072ff', borderColor: isMaster ? '#e2e8f0' : '#0072ff', cursor: isMaster ? 'not-allowed' : 'pointer' }} 
+                    onClick={() => !isMaster && setEditingStudent(s)}
+                    disabled={isMaster}
                   >
-                    Modify
+                    {isMaster ? "View Only" : "Modify"}
                   </button>
                 </td>
               </tr>

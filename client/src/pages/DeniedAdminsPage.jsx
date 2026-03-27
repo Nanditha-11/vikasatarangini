@@ -104,7 +104,14 @@ const DeniedAdminsPage = () => {
                 <tr key={admin._id}>
                   <td style={{ fontWeight: '700', fontSize: '18px', color: '#0f172a' }}>{admin.username}</td>
                   <td style={{ fontSize: '16px' }}>{admin.district}</td>
-                  <td style={{ fontSize: '16px' }}>{admin.place.charAt(0).toUpperCase() + admin.place.slice(1)}</td>
+                  <td style={{ fontSize: '16px' }}>
+                    <span 
+                      style={{ color: '#0072ff', textDecoration: 'underline', cursor: 'pointer', fontWeight: '600' }} 
+                      onClick={() => nav(`/?district=${admin.district}&place=${admin.place}`)}
+                    >
+                      {admin.place.charAt(0).toUpperCase() + admin.place.slice(1)}
+                    </span>
+                  </td>
                   <td className="muted" style={{ fontSize: '16px' }}>{admin.email}</td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>

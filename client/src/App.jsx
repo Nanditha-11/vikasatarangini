@@ -17,9 +17,9 @@ function RequireAuth({ children, adminOnly = false }) {
   
   if (!token) return <Navigate to="/login" replace />;
   
-  // If Master tries to access regular pages, redirect them to dashboard
-  if (adminOnly && user?.role === "master") {
-    return <Navigate to="/master-dashboard" replace />;
+  // Master Admins are allowed to access these pages in Audit Mode
+  if (user?.role === "master") {
+    return children;
   }
   
   return children;

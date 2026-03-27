@@ -1,12 +1,16 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { setToken } from "../lib/api";
 
 export function Layout({ title, subtitle, children }) {
   const nav = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   const isMaster = user?.role === "master";
+  
+  const currentPlace = isMaster ? (searchParams.get("place") || "Main") : (user?.place || "Main");
+  const brandName = currentPlace === "Main" ? "Vikasa Tarangini" : `${currentPlace.charAt(0).toUpperCase() + currentPlace.slice(1)} Vikasa Tarangini`;
 
   const getBtnStyle = (path) => {
     const isActive = location.pathname === path;
@@ -45,31 +49,36 @@ export function Layout({ title, subtitle, children }) {
             boxShadow: '0 2px 8px rgba(100, 150, 200, 0.1)'
           }} />
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.4em', color: '#0d2866' }}>{title || "Vikasatarangini – Attendance Management System"}</h1>
-            {subtitle && <p style={{ margin: '4px 0 0', color: '#475569', fontSize: '0.9em' }}>{subtitle}</p>}
+            <h1 style={{ margin: 0, fontSize: '1.4em', color: '#0d2866', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {brandName}
+            </h1>
+            <p style={{ margin: '2px 0 0', color: '#475569', fontSize: '0.8em', fontWeight: 'bold' }}>
+              {title || "Attendance Management System"}
+            </p>
           </div>
         </div>
 
-        <div className="row" style={{ gap: '20px', flex: 1, justifyContent: 'center' }}>
-          {!isMaster ? (
+        <div className="row" style={{ gap: '12px', flex: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {(!isMaster || location.search) && !['/master-dashboard', '/approved-admins', '/denied-admins'].includes(location.pathname) && (
             <>
-              <button className="btn" style={getBtnStyle("/")} onClick={() => nav("/")}>Home</button>
-              <button className="btn" style={getBtnStyle("/history")} onClick={() => nav("/history")}>Attendance History</button>
-              <button className="btn" style={getBtnStyle("/modify")} onClick={() => nav("/modify")}>Modify Students</button>
-              <button className="btn" style={getBtnStyle("/about")} onClick={() => nav("/about")}>About</button>
+              <button className="btn" style={getBtnStyle("/")} onClick={() => nav("/" + location.search)}>Home</button>
+              <button className="btn" style={getBtnStyle("/history")} onClick={() => nav("/history" + location.search)}>Attendance History</button>
+              <button className="btn" style={getBtnStyle("/modify")} onClick={() => nav("/modify" + location.search)}>Modify Students</button>
+              <button className="btn" style={getBtnStyle("/about")} onClick={() => nav("/about" + location.search)}>About</button>
             </>
-          ) : (
-            <button 
-              className="btn" 
-              style={{ background: 'none', border: 'none', fontWeight: '700', color: '#2563eb', fontSize: '18px' }} 
-              onClick={() => nav("/master-dashboard")}
-            >
-              Manage Admins
-            </button>
           )}
         </div>
 
-        <div className="actions">
+        <div className="actions" style={{ gap: '10px', display: 'flex' }}>
+          {isMaster && (
+            <button 
+              className="btn" 
+              style={{ ...getBtnStyle("/master-dashboard"), background: 'linear-gradient(135deg, #0d2866, #0072ff)', border: 'none', color: 'white' }} 
+              onClick={() => nav("/master-dashboard")}
+            >
+              Admin List
+            </button>
+          )}
           <button
             className="btn danger"
             onClick={() => {

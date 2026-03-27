@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAttendance } from "../hooks/useAttendance";
@@ -28,11 +28,30 @@ export function AttendancePage() {
 
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
+  const [searchParams] = useSearchParams();
   const isMaster = user?.role === "master";
 
-  const [viewDistrict, setViewDistrict] = useState(isMaster ? "Main" : "");
-  const [viewPlace, setViewPlace] = useState(isMaster ? "Main" : "");
+  const [viewDistrict, setViewDistrict] = useState(() => {
+    const d = searchParams.get("district");
+    if (isMaster && d) return d;
+    return isMaster ? "Main" : "";
+  });
+  const [viewPlace, setViewPlace] = useState(() => {
+    const p = searchParams.get("place");
+    if (isMaster && p) return p;
+    return isMaster ? "Main" : "";
+  });
   const [places, setPlaces] = useState([]);
+
+  // Sync with searchParams if they change (e.g. from links)
+  useEffect(() => {
+    if (isMaster) {
+      const d = searchParams.get("district");
+      const p = searchParams.get("place");
+      if (d) setViewDistrict(d);
+      if (p) setViewPlace(p);
+    }
+  }, [searchParams, isMaster]);
 
   const {
     date, setDate,
@@ -79,7 +98,7 @@ export function AttendancePage() {
     save(false, nextRows).catch(console.error);
   };
 
-  const handleConfirmMarking = async ({ qty, payment }) => {
+  const handleConfirmMarking = async ({ qty, payment, skipWhatsApp = false }) => {
     if (!markingStudent) return;
 
     // 1. Update state
@@ -93,27 +112,22 @@ export function AttendancePage() {
     setMarkingStudent(null);
 
     // 3. Prepare message
-    let baseMsg = message || "Thank you for attending the session!";
-    if (!baseMsg.includes("Jai Srimannarayana")) {
-      baseMsg = "Jai Srimannarayana!\n" + baseMsg;
-    }
+    if (!skipWhatsApp) {
+      let baseMsg = message || "Thank you for attending the session!";
+      if (!baseMsg.includes("Jai Srimannarayana")) {
+        baseMsg = "Jai Srimannarayana!\n" + baseMsg;
+      }
+      const text = encodeURIComponent(baseMsg);
+      const phone = studentPhone.replace(/\D/g, '');
+      const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
 
-    const amount = qty * 70;
-
-    // Send ONLY the exact message displayed in the sidebar editor
-    const finalMsg = baseMsg;
-
-    const text = encodeURIComponent(finalMsg);
-    const phone = studentPhone.replace(/\D/g, '');
-    const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
-
-    console.log(`[Auto-WhatsApp] Sending to ${fullPhone}: ${finalMsg}`);
-    
-    // Only open if we have a phone number
-    if (fullPhone && fullPhone.length >= 10) {
-      window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
-    } else {
-      alert("Invalid student phone number. Message not sent.");
+      console.log(`[Auto-WhatsApp] Sending to ${fullPhone}: ${baseMsg}`);
+      
+      if (fullPhone && fullPhone.length >= 10) {
+        window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+      } else {
+        alert("Invalid student phone number. Message not sent.");
+      }
     }
   };
 
@@ -148,14 +162,29 @@ export function AttendancePage() {
     };
   }, [rows]);
 
-  const handleConfirmModify = async ({ qty, remark }) => {
+  const handleConfirmModify = async ({ qty, remark, skipWhatsApp = false }) => {
     if (!modifyingStudent) return;
+    const sPhone = modifyingStudent.phone;
     const nextRows = rows.map(r =>
       r.slNo === modifyingStudent.slNo ? { ...r, quantity: Number(qty), remark: remark } : r
     );
     setRows(nextRows);
     await save(false, nextRows);
     setModifyingStudent(null);
+
+    if (!skipWhatsApp) {
+      let baseMsg = message || "Thank you for attending the session!";
+      if (!baseMsg.includes("Jai Srimannarayana")) {
+        baseMsg = "Jai Srimannarayana!\n" + baseMsg;
+      }
+      const text = encodeURIComponent(baseMsg);
+      const phone = sPhone.replace(/\D/g, '');
+      const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
+      
+      if (fullPhone && fullPhone.length >= 10) {
+        window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+      }
+    }
   };
 
   const paymentStats = useMemo(() => {
@@ -316,7 +345,10 @@ export function AttendancePage() {
                   <ul style={{ listStyle: 'none', padding: 0 }}>
                     {summaryLists.present.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-                        <b>{s.slNo}</b> - {s.name}
+                        <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
+                        <div className="muted" style={{ fontSize: '0.85em' }}>
+                          Father: {s.fatherName || '-'} | Phone: {s.phone}
+                        </div>
                       </li>
                     ))}
                     {summaryLists.present.length === 0 && <p className="muted">No students marked present.</p>}
@@ -328,7 +360,10 @@ export function AttendancePage() {
                   <ul style={{ listStyle: 'none', padding: 0 }}>
                     {summaryLists.absent.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-                        <b>{s.slNo}</b> - {s.name}
+                        <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
+                        <div className="muted" style={{ fontSize: '0.85em' }}>
+                          Father: {s.fatherName || '-'} | Phone: {s.phone}
+                        </div>
                       </li>
                     ))}
                     {summaryLists.absent.length === 0 && <p className="muted">All students are present.</p>}
@@ -336,11 +371,14 @@ export function AttendancePage() {
                 </div>
 
                 <div className="card">
-                  <h3 style={{ color: '#0ea5e9', borderBottom: '2px solid #0ea5e9', paddingBottom: '8px' }}>New Students ({summaryLists.new.length})</h3>
+                  <h3 style={{ color: '#000000', borderBottom: '2px solid #000000', paddingBottom: '8px' }}>New Students ({summaryLists.new.length})</h3>
                   <ul style={{ listStyle: 'none', padding: 0 }}>
                     {summaryLists.new.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-                        <b>{s.slNo}</b> - {s.name}
+                        <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
+                        <div className="muted" style={{ fontSize: '0.85em' }}>
+                          Father: {s.fatherName || '-'} | Phone: {s.phone}
+                        </div>
                       </li>
                     ))}
                     {summaryLists.new.length === 0 && <p className="muted">No new students today.</p>}
@@ -360,19 +398,22 @@ export function AttendancePage() {
               onViewHistory={setHistoryStudent}
               busy={busy}
               viewMode={viewMode}
+              isMaster={isMaster}
             />
           )}
         </div>
 
         <div className="sidebar">
-          <WhatsAppEditor
-            message={message}
-            setMessage={setMessage}
-            whatsappLink={whatsappLink}
-            setWhatsappLink={setWhatsappLink}
-            onSave={() => save(true)}
-            busy={busy}
-          />
+          {!isMaster && (
+            <WhatsAppEditor
+              message={message}
+              setMessage={setMessage}
+              whatsappLink={whatsappLink}
+              setWhatsappLink={setWhatsappLink}
+              onSave={() => save(true)}
+              busy={busy}
+            />
+          )}
 
           {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
         </div>
@@ -384,7 +425,7 @@ export function AttendancePage() {
           onClose={() => setHistoryStudent(null)}
         />
       )}
-      {markingStudent && (
+      {!isMaster && markingStudent && (
         <MarkingModal
           student={markingStudent}
           isOpen={!!markingStudent}
@@ -392,7 +433,7 @@ export function AttendancePage() {
           onConfirm={handleConfirmMarking}
         />
       )}
-      {modifyingStudent && (
+      {!isMaster && modifyingStudent && (
         <ModifyModal
           student={modifyingStudent}
           isOpen={!!modifyingStudent}

@@ -119,11 +119,47 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
           </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => onConfirm({ qty, payment, skipWhatsApp: true })}
+              disabled={false}
+              style={{
+                flex: 1,
+                padding: '14px 10px',
+                borderRadius: '12px',
+                border: '1px solid #059669',
+                background: 'white',
+                color: '#059669',
+                fontWeight: '700',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Mark Only
+            </button>
+            <button
+              onClick={() => onConfirm({ qty, payment, skipWhatsApp: false })}
+              style={{
+                flex: 1.5,
+                padding: '14px 10px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                color: 'white',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)',
+                fontSize: '0.9rem'
+              }}
+            >
+              Mark & WhatsApp
+            </button>
+          </div>
           <button
             onClick={onClose}
             style={{
-              flex: 1,
+              width: '100%',
               padding: '12px',
               borderRadius: '12px',
               border: '1px solid #d1d5db',
@@ -134,22 +170,6 @@ export function MarkingModal({ student, isOpen, onClose, onConfirm }) {
             }}
           >
             Cancel
-          </button>
-          <button
-            onClick={() => onConfirm({ qty, payment })}
-            style={{
-              flex: 1,
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-              color: 'white',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-            }}
-          >
-            OK & Send WhatsApp
           </button>
         </div>
       </div>

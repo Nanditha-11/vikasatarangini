@@ -140,29 +140,49 @@ export function ModifyModal({ student, isOpen, onClose, onConfirm }) {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            disabled={busy}
-            onClick={handleSave}
-            style={{
-              flex: 2,
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-              color: 'white',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-            }}
-          >
-            {busy ? "Saving..." : "Save Changes"}
-          </button>
+        <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              disabled={busy}
+              onClick={() => onConfirm({ qty, remark, skipWhatsApp: true })}
+              style={{
+                flex: 1,
+                padding: '14px 10px',
+                borderRadius: '12px',
+                border: '1px solid #1e40af',
+                background: 'white',
+                color: '#1e40af',
+                fontWeight: '700',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Update Only
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onConfirm({ qty, remark, skipWhatsApp: false })}
+              style={{
+                flex: 1.5,
+                padding: '14px 10px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+                color: 'white',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                fontSize: '0.9rem'
+              }}
+            >
+              Update & WhatsApp
+            </button>
+          </div>
           <button
             disabled={busy}
             onClick={onClose}
             style={{
-              flex: 1,
+              width: '100%',
               padding: '12px',
               borderRadius: '12px',
               border: '1px solid #d1d5db',

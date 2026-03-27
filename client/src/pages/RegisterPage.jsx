@@ -278,7 +278,7 @@ export function RegisterPage() {
                   </button>
                 </div>
                 <div style={{ height: '30px', textAlign: 'center' }}>
-                  {error && <p style={{ color: '#be123c', fontSize: '0.95em', marginTop: '8px', fontWeight: 'bold' }}>Enter valid email</p>}
+                  {error && <p style={{ color: '#be123c', fontSize: '0.95em', marginTop: '8px', fontWeight: 'bold' }}>{error}</p>}
                 </div>
               </form>
             )}

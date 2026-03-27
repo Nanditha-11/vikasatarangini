@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { StudentHistoryLog } from "../components/StudentHistoryLog";
@@ -13,13 +13,18 @@ export function AttendanceHistoryDetailPage() {
   const [paymentFilter, setPaymentFilter] = useState("all"); // all | cash | online | free
   const [historyStudent, setHistoryStudent] = useState(null);
 
+  const location = useLocation();
+  
   useEffect(() => {
     setLoading(true);
-    apiFetch(`/api/attendance/${date}`)
+    let url = `/api/attendance/${date}`;
+    if (location.search) url += location.search;
+    
+    apiFetch(url)
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [date]);
+  }, [date, location.search]);
 
   const stats = useMemo(() => {
     if (!data || !data.present) return { cashQty: 0, cashAmount: 0, onlineQty: 0, onlineAmount: 0, freeQty: 0 };
@@ -77,7 +82,7 @@ export function AttendanceHistoryDetailPage() {
     <Layout title={`Attendance Report: ${date.split('-').reverse().join('-')}`}>
       <div className="card" style={{ padding: '24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px' }}>
-          <button className="btn" onClick={() => nav("/history")}>← Back to History</button>
+          <button className="btn" onClick={() => nav("/history" + location.search)}>← Back to History</button>
           <h2 style={{ margin: 0 }}>{date.split('-').reverse().join('-')}</h2>
           <div style={{ flex: 1, maxWidth: '20px' }} />
         </div>

@@ -1,15 +1,23 @@
-import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import presidentImg from '../assets/president.jpg';
 
 export function AboutPage() {
+  const [searchParams] = useSearchParams();
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isMaster = user?.role === "master";
+
+  const currentPlace = isMaster ? (searchParams.get("place") || "Main") : (user?.place || "Main");
+  const branchName = currentPlace === "Main" ? "Vikasa Tarangini" : `${currentPlace.charAt(0).toUpperCase() + currentPlace.slice(1)} Vikasa Tarangini`;
+
   return (
-    <Layout title="Huzurabad Vikasa Tarangini">
+    <Layout title={branchName}>
       <div className="card" style={{ padding: 'min(40px, 5vw)', lineHeight: '1.6', color: '#374151' }}>
 
         {/* Header Section */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{ color: '#1e3a8a', fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', marginBottom: '8px' }}>Huzurabad Vikasa Tarangini</h1>
+          <h1 style={{ color: '#1e3a8a', fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', marginBottom: '8px' }}>{branchName}</h1>
           <div style={{ width: '100px', height: '4px', background: 'linear-gradient(to right, #3b82f6, #60a5fa)', margin: '15px auto', borderRadius: '2px' }}></div>
         </div>
 
@@ -45,7 +53,7 @@ export function AboutPage() {
 
             <h3 style={{ margin: '0 0 5px 0', fontSize: '1.3rem', color: '#1e3a8a' }}>Yathipathi Arun Kumar</h3>
             <p style={{ margin: 0, fontWeight: 'bold', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '1.5px', fontSize: '1.1rem' }}>President</p>
-            <p style={{ margin: '8px 0 0 0', color: '#000000', fontSize: '1.1rem', fontWeight: '500' }}>Huzurabad Vikasa Tarangini</p>
+            <p style={{ margin: '8px 0 0 0', color: '#000000', fontSize: '1.1rem', fontWeight: '500' }}>{branchName}</p>
             <p style={{ margin: '15px 0 0 0', fontWeight: 'bold', color: '#1e3a8a', fontSize: '1.1rem' }}>
               📞 9848118182
             </p>
