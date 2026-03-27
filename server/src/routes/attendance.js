@@ -28,76 +28,74 @@ attendanceRouter.get("/:date", async (req, res) => {
   const endOfDay = dayjs(date).endOf('day').toDate();
 
   // In multi-db, we don't need to filter by createdBy as the DB is already isolated
-  const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
+  const normalizedDate = normalizeDateParam(req.params.date);
+  
+  // 1. Get current day data
+  const [studentsRaw, attendanceRaw, newStudentsRaw] = await Promise.all([
     Student.find({}).lean(),
-    Attendance.findOne({ date }).lean(),
+    Attendance.find({ date: normalizedDate }).lean(),
     Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
   ]);
 
-  const presentMap = new Map(
-    (attendance?.presentStudents || []).map((p) => [p.slNo, { 
-      paymentMethod: p.paymentMethod || "Cash", 
-      quantity: p.quantity || 0,
-      remark: p.remark || "" 
-    }])
-  );
+  const metadata = attendanceRaw.find(d => d.type === "metadata") || {};
+  const presentDocs = attendanceRaw.filter(d => d.type === "student");
+  const presentMap = new Map(presentDocs.map(p => [p.slNo, p]));
 
-  const students = [...studentsRaw].sort((a, b) => Number(a.slNo) - Number(b.slNo));
-  const newStudents = [...newStudentsRaw]
-    .sort((a, b) => Number(a.slNo) - Number(b.slNo))
-    .map(s => ({
-      ...s,
-      present: presentMap.has(s.slNo)
-    }));
-
-  const previousAttendance = await Attendance.findOne({ 
-    date: { $lt: date }
+  // 2. Get previous day metadata + sold stock
+  const prevMetadata = await Attendance.findOne({ 
+    date: { $lt: normalizedDate },
+    type: "metadata"
   }).sort({ date: -1 }).lean();
 
   let previousRemainingStock = 0;
   let previousOpeningStock = 0;
   let previousSoldStock = 0;
-  
-  if (previousAttendance) {
-    previousSoldStock = (previousAttendance.presentStudents || []).reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
-    previousOpeningStock = previousAttendance.openingStock || 0;
-    previousRemainingStock = previousOpeningStock - previousSoldStock;
-    if (previousRemainingStock < 0) previousRemainingStock = 0;
+
+  if (prevMetadata) {
+    const prevDate = prevMetadata.date;
+    const prevStudentDocs = await Attendance.find({ date: prevDate, type: "student" }).lean();
+    
+    previousSoldStock = prevStudentDocs.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
+    previousOpeningStock = prevMetadata.openingStock || 0;
+    previousRemainingStock = Math.max(0, previousOpeningStock - previousSoldStock);
   }
 
-  const withStatus = students.map((s) => ({
-    ...s,
-    present: presentMap.has(s.slNo),
-    paymentMethod: presentMap.get(s.slNo)?.paymentMethod || "Cash",
-    quantity: presentMap.get(s.slNo)?.quantity || 0,
-    remark: presentMap.get(s.slNo)?.remark || "",
-  }));
+  // 3. Build student list with status
+  const students = studentsRaw.map(s => {
+    const p = presentMap.get(s.slNo);
+    return {
+      ...s,
+      id: s._id,
+      present: !!p,
+      quantity: p?.quantity || 0,
+      paymentMethod: p?.paymentMethod || 'Cash',
+      remark: p?.remark || ''
+    };
+  }).sort((a, b) => Number(a.slNo) - Number(b.slNo));
 
-  const present = withStatus.filter((s) => s.present);
-  const absent = withStatus.filter((s) => !s.present);
+  const present = students.filter(s => s.present);
+  const absent = students.filter(s => !s.present);
+  const newStudents = newStudentsRaw.map(s => ({ 
+    ...s, 
+    present: presentMap.has(s.slNo) 
+  })).sort((a, b) => Number(a.slNo) - Number(b.slNo));
 
-  // Admin remains on the main DB connection
   const admin = await Admin.findOne({ username }).lean();
   const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
 
-  const firstDoc = attendance || {};
-  const message = firstDoc.message;
-  const whatsappLink = firstDoc.whatsappLink;
-  const openingStock = firstDoc.openingStock || 0;
-
   res.json({
-    date,
+    date: normalizedDate,
     total: students.length,
     presentCount: present.length,
     absentCount: absent.length,
-    message: message || defaultMessage,
-    whatsappLink: whatsappLink || admin?.whatsappLink || "",
-    openingStock: openingStock,
+    message: metadata.message || defaultMessage,
+    whatsappLink: metadata.whatsappLink || admin?.whatsappLink || "",
+    openingStock: metadata.openingStock || 0,
     previousOpeningStock,
     previousSoldStock,
     previousRemainingStock,
-    hasAttendance: !!attendance,
-    students: withStatus,
+    hasAttendance: attendanceRaw.length > 0,
+    students,
     present,
     absent,
     newStudents,
@@ -131,32 +129,38 @@ attendanceRouter.post("/:date/save", async (req, res) => {
   const enrichedPresent = parsed.data.presentStudents.map(p => {
     const student = studentMap.get(p.slNo) || {};
     return {
-      ...p,
+      date,
+      type: "student",
+      slNo: p.slNo,
       name: student.name || "",
       fatherName: student.fatherName || "",
-      phone: student.phone || ""
+      phone: student.phone || "",
+      paymentMethod: p.paymentMethod || "Cash",
+      quantity: p.quantity || 0,
+      remark: p.remark || "",
+      district,
+      place
     };
   });
 
-  const presentSlNos = new Set(parsed.data.presentStudents.map(p => p.slNo));
-  const absentStudents = allStudents
-    .filter(s => !presentSlNos.has(s.slNo))
-    .map(s => ({ slNo: s.slNo, name: s.name }));
+  const metadataDoc = {
+    date,
+    type: "metadata",
+    message: parsed.data.message,
+    whatsappLink: parsed.data.whatsappLink,
+    openingStock: parsed.data.openingStock,
+    district,
+    place
+  };
 
-  await Attendance.updateOne(
-    { date },
-    { $set: { 
-      date, 
-      presentStudents: enrichedPresent, 
-      absentStudents: absentStudents,
-      message: parsed.data.message,
-      whatsappLink: parsed.data.whatsappLink,
-      openingStock: parsed.data.openingStock,
-      district,
-      place
-    } },
-    { upsert: true }
-  );
+  // Delete all existing attendance records for this date
+  await Attendance.deleteMany({ date });
+
+  // Insert normalized records
+  if (enrichedPresent.length > 0) {
+    await Attendance.insertMany(enrichedPresent);
+  }
+  await Attendance.create(metadataDoc);
 
   // Update the Admin's default whatsappLink and message too if provided
   if (parsed.data.whatsappLink || parsed.data.message) {
@@ -216,49 +220,53 @@ attendanceRouter.get("/list/history", async (req, res) => {
 attendanceRouter.get("/:date/download", async (req, res) => {
   const { Student, Attendance } = req.tenantModels;
   try {
-    const date = normalizeDateParam(req.params.date);
-    if (!date) return res.status(400).json({ error: "Invalid date" });
+    const normalizedDate = normalizeDateParam(req.params.date);
+    if (!normalizedDate) return res.status(400).json({ error: "Invalid date" });
 
-    const startOfDay = dayjs(date).startOf('day').toDate();
-    const endOfDay = dayjs(date).endOf('day').toDate();
-
-    const [studentsRaw, attendance, newStudentsRaw] = await Promise.all([
+    const [studentsRaw, attendanceRaw] = await Promise.all([
       Student.find({}).lean(),
-      Attendance.findOne({ date }).lean(),
-      Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean()
+      Attendance.find({ date: normalizedDate }).lean()
     ]);
 
-    const students = [...studentsRaw].sort((a, b) => Number(a.slNo) - Number(b.slNo));
-    const newStudents = [...newStudentsRaw].sort((a, b) => Number(a.slNo) - Number(b.slNo));
+    const metadata = attendanceRaw.find(d => d.type === "metadata") || {};
+    const presentDocs = attendanceRaw.filter(d => d.type === "student");
+    const presentMap = new Map(presentDocs.map(p => [p.slNo, p]));
 
-    const presentMap = new Map(
-      (attendance?.presentStudents || []).map((p) => [p.slNo, { paymentMethod: p.paymentMethod || "Cash", quantity: p.quantity || 0, remark: p.remark || "" }])
-    );
-    const present = students
-      .filter((s) => presentMap.has(s.slNo))
-      .map(s => ({ 
-        ...s, 
-        present: true,
-        paymentMethod: presentMap.get(s.slNo)?.paymentMethod, 
-        quantity: presentMap.get(s.slNo)?.quantity,
-        remark: presentMap.get(s.slNo)?.remark
-      }));
-    const absent = students.filter((s) => !presentMap.has(s.slNo)).map(s => ({ ...s, present: false }));
+    const students = studentsRaw.map(s => {
+      const p = presentMap.get(s.slNo);
+      return {
+        ...s,
+        present: !!p,
+        paymentMethod: p?.paymentMethod || "Cash",
+        quantity: p?.quantity || 0,
+        remark: p?.remark || ""
+      };
+    }).sort((a, b) => Number(a.slNo) - Number(b.slNo));
 
-    const newStudentsWithStatus = newStudents.map(s => ({
-      ...s,
-      present: presentMap.has(s.slNo),
-      paymentMethod: presentMap.get(s.slNo)?.paymentMethod, 
-      quantity: presentMap.get(s.slNo)?.quantity,
-      remark: presentMap.get(s.slNo)?.remark
-    }));
+    const present = students.filter(s => s.present);
+    const absent = students.filter(s => !s.present);
+    
+    // For "New Students" sheet, we just filter current day registrations
+    const startOfDay = dayjs(normalizedDate).startOf('day').toDate();
+    const endOfDay = dayjs(normalizedDate).endOf('day').toDate();
+    const newStudentsRaw = await Student.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean();
+    const newStudentsWithStatus = newStudentsRaw.map(s => {
+      const p = presentMap.get(s.slNo);
+      return {
+        ...s,
+        present: !!p,
+        paymentMethod: p?.paymentMethod || "Cash",
+        quantity: p?.quantity || 0,
+        remark: p?.remark || ""
+      };
+    }).sort((a, b) => Number(a.slNo) - Number(b.slNo));
 
     const buf = buildAttendanceWorkbook({ 
-      date, 
+      date: normalizedDate, 
       present, 
       absent, 
-      newStudents: newStudentsWithStatus, 
-      openingStock: attendance?.openingStock || 0
+      newStudents: newStudentsWithStatus,
+      openingStock: metadata.openingStock || 0
     });
     const filename = `attendance_${date}.xlsx`;
 
@@ -275,22 +283,22 @@ attendanceRouter.get("/student/:slNo", async (req, res) => {
   const { Attendance } = req.tenantModels;
   const { slNo } = req.params;
   
-  const allAttendance = await Attendance.find({ 
-    "presentStudents.slNo": slNo
+  const studentAttendance = await Attendance.find({ 
+    type: "student",
+    slNo: slNo
   }).sort({ date: -1 }).lean();
 
-  const history = allAttendance.map(att => {
-    const record = att.presentStudents.find(p => p.slNo === slNo);
+  const history = studentAttendance.map(att => {
     return {
       date: att.date,
       present: true,
-      quantity: record.quantity || 0,
-      paymentMethod: record.paymentMethod,
-      remark: record.remark
+      quantity: att.quantity || 0,
+      paymentMethod: att.paymentMethod,
+      remark: att.remark
     };
   });
 
-  const allDateDocs = await Attendance.find({}, { date: 1 }).sort({ date: -1 }).lean();
+  const allDateDocs = await Attendance.find({ type: "metadata" }, { date: 1 }).sort({ date: -1 }).lean();
   const presentDates = new Set(history.map(h => h.date));
   
   const fullLog = allDateDocs.map(doc => {

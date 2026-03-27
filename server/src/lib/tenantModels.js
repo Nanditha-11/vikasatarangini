@@ -16,30 +16,30 @@ StudentSchema.index({ slNo: 1 }, { unique: true });
 
 const AttendanceSchema = new mongoose.Schema({
   date: { type: String, required: true }, // Format YYYY-MM-DD
-  presentStudents: [
-    {
-      slNo: { type: String, required: true },
-      name: { type: String },
-      fatherName: { type: String },
-      phone: { type: String },
-      paymentMethod: { type: String, enum: ["Cash", "Online", "Free"], default: "Cash" },
-      quantity: { type: Number, default: 0 },
-      remark: { type: String, default: "" },
-    },
-  ],
-  absentStudents: [
-    {
-      slNo: { type: String, required: true },
-      name: { type: String },
-    },
-  ],
+  type: { type: String, enum: ["student", "metadata"], required: true },
+  
+  // Fields for Student type
+  slNo: { type: String },
+  name: { type: String },
+  fatherName: { type: String },
+  phone: { type: String },
+  paymentMethod: { type: String },
+  quantity: { type: Number },
+  remark: { type: String },
+
+  // Fields for Metadata type
   message: String,
+  whatsappLink: String,
   openingStock: { type: Number, default: 0 },
+  
   district: String,
   place: String,
   createdAt: { type: Date, default: Date.now }
 });
-AttendanceSchema.index({ date: 1 }, { unique: true });
+
+// We can't have a unique index on 'date' alone anymore as many student docs share a date
+// Instead, use a composite index for finding specific records
+AttendanceSchema.index({ date: 1, type: 1, slNo: 1 });
 
 /**
  * Returns the models for a specific tenant connection.
