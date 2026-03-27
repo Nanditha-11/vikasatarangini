@@ -129,11 +129,11 @@ export function AttendanceHistoryDetailPage() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                <th style={{ width: '8%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
-                <th style={{ width: '13%', textAlign: 'left', padding: '12px 5px' }}>Name</th>
-                <th style={{ width: '13%', textAlign: 'left', padding: '12px 5px' }}>Father Name</th>
-                <th style={{ width: '8%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
-                <th style={{ width: '12%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
+                <th style={{ width: activeTab === 'new' ? '10%' : '8%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
+                <th style={{ width: activeTab === 'new' ? '20%' : '13%', textAlign: 'left', padding: '12px 5px' }}>Name</th>
+                <th style={{ width: activeTab === 'new' ? '20%' : '13%', textAlign: 'left', padding: '12px 5px' }}>Father Name</th>
+                <th style={{ width: activeTab === 'new' ? '10%' : '8%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
+                <th style={{ width: activeTab === 'new' ? '20%' : '12%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
                 {activeTab === 'present' ? (
                   <>
                     <th style={{ width: '11%', textAlign: 'center', padding: '12px 5px' }}>Method</th>
@@ -142,8 +142,10 @@ export function AttendanceHistoryDetailPage() {
                     <th style={{ width: '16%', textAlign: 'center', padding: '12px 5px' }}>Remarks</th>
                   </>
                 ) : activeTab === 'new' ? (
-                  <th style={{ width: '40%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
-                ) : null}
+                  <th style={{ width: '20%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
+                ) : (
+                  <th style={{ width: '43%' }}>-</th>
+                )}
               </tr>
             </thead>
             <tbody>
