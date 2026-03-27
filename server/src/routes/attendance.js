@@ -298,15 +298,17 @@ attendanceRouter.get("/student/:slNo", async (req, res) => {
     };
   });
 
-  const allDateDocs = await Attendance.find({ type: "metadata" }, { date: 1 }).sort({ date: -1 }).lean();
+  const uniqueDates = await Attendance.distinct("date", { type: "metadata" });
+  // Since distinct doesn't sort, we need to sort manually
+  const allDates = uniqueDates.sort((a, b) => b.localeCompare(a));
   const presentDates = new Set(history.map(h => h.date));
   
-  const fullLog = allDateDocs.map(doc => {
-    if (presentDates.has(doc.date)) {
-      return history.find(h => h.date === doc.date);
+  const fullLog = allDates.map(d => {
+    if (presentDates.has(d)) {
+      return history.find(h => h.date === d);
     }
     return {
-      date: doc.date,
+      date: d,
       present: false,
       quantity: 0
     };
