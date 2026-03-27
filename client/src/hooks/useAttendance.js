@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { apiFetch } from "../lib/api";
 import { todayParts, toIsoDate } from "../lib/date";
 
 export function useAttendance(initialDate, viewDistrict, viewPlace) {
   const [date, setDate] = useState(initialDate || toIsoDate(todayParts().y, todayParts().m, todayParts().d));
+  const lastLoadedDate = useRef(null);
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -12,6 +13,7 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
   const [previousRemainingStock, setPreviousRemainingStock] = useState(0);
   const [prevStockStats, setPrevStockStats] = useState({ opening: 0, sold: 0 });
   const [message, setMessage] = useState("Jai Srimannarayana! Thank you for attending the session today.");
+  const [whatsappLink, setWhatsappLink] = useState("");
 
   const load = useCallback(async (d, vDist, vPlace) => {
     setBusy(true);
@@ -31,7 +33,13 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
         absentCount: data.absentCount,
         newStudents: data.newStudents || [],
       });
-      setMessage(data.message || "Jai Srimannarayana! Thank you for attending the session today.");
+      
+      // Only reset template/link if we're loading a fresh date or if they aren't set yet
+      if (d !== lastLoadedDate.current || !whatsappLink) {
+        setMessage(data.message || "Jai Srimannarayana! Thank you for attending the session today.");
+        setWhatsappLink(data.whatsappLink || "");
+        lastLoadedDate.current = d;
+      }
       
       const prevRem = data.previousRemainingStock || 0;
       setPreviousRemainingStock(prevRem);
@@ -69,9 +77,8 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
       await apiFetch(saveUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ presentStudents, message, openingStock }),
+        body: JSON.stringify({ presentStudents, message, whatsappLink, openingStock }),
       });
-      if (showToast) alert("Changes saved successfully!");
       return true;
     } catch (err) {
       setError(err.message || "Save failed");
@@ -101,6 +108,7 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
     previousRemainingStock,
     prevStockStats,
     message, setMessage,
+    whatsappLink, setWhatsappLink,
     load,
     save
   };

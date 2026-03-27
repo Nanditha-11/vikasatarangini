@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
 
-export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], viewDistrict, viewPlace }) {
+export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], viewDistrict, viewPlace, whatsappLink }) {
   const [showAddManual, setShowAddManual] = useState(false);
   const [newStudent, setNewStudent] = useState({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [successData, setSuccessData] = useState(null);
   const [config, setConfig] = useState(null);
   const [adminProfile, setAdminProfile] = useState(null);
@@ -32,7 +33,17 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
   }, [viewDistrict, viewPlace]);
 
   const handleAddManual = async () => {
-    if (!newStudent.name || !newStudent.phone) return alert("Name and Phone are required");
+    const errors = {};
+    if (!newStudent.name.trim()) errors.name = "fill the required field";
+    if (!newStudent.phone.trim()) errors.phone = "fill the required field";
+    else if (newStudent.phone.length !== 10) errors.phone = "Phone must be exactly 10 digits";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+
     setBusy(true);
     setError("");
     try {
@@ -47,22 +58,23 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       
-      const link = (config?.whatsappLink && config.whatsappLink.startsWith("http"))
-        ? config.whatsappLink
-        : (adminProfile?.whatsappLink || user?.whatsappLink || "");
+      const link = (whatsappLink && whatsappLink.startsWith("http"))
+        ? whatsappLink
+        : (config?.whatsappLink && config.whatsappLink.startsWith("http"))
+          ? config.whatsappLink
+          : (adminProfile?.whatsappLink || user?.whatsappLink || "");
       
       let num = res.student?.phone?.replace(/\D/g, "");
       if (num) {
         if (num.length === 10) num = "91" + num;
-        const template = config?.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`;
+        let template = config?.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`;
+        if (!link || !link.startsWith("http")) {
+          // Send a simplified message if no group link is available
+          template = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}.`;
+        }
         const inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
 
-        if (link && link.startsWith("http")) {
-          setSuccessData({ phone: num, text: inviteMsg });
-        } else {
-          // If no link, just show a simple success message without the WhatsApp button
-          alert("Student added successfully!");
-        }
+        setSuccessData({ phone: num, text: inviteMsg });
       }
 
       setNewStudent({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
@@ -93,20 +105,49 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               return max + 1;
             })()}
           </div>
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="grid" style={{ gridTemplateColumns: '1.5fr 1.5fr 1.2fr 0.8fr', gap: '12px' }}>
             <div className="field">
               <label>Student Name</label>
-              <input className="input" value={newStudent.name} onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })} placeholder="Full Name" />
+              <input 
+                className="input" 
+                value={newStudent.name} 
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  setNewStudent({ ...newStudent, name: val });
+                  if (val.trim()) setFieldErrors({ ...fieldErrors, name: "" });
+                }} 
+                placeholder="Full Name" 
+              />
+              {fieldErrors.name && <div style={{ color: '#ef4444', fontSize: '0.75em', marginTop: '4px', fontWeight: 'bold' }}>{fieldErrors.name}</div>}
             </div>
             <div className="field">
               <label>Father Name</label>
-              <input className="input" value={newStudent.fatherName} onChange={(e) => setNewStudent({ ...newStudent, fatherName: e.target.value })} placeholder="Father's Name" />
+              <input 
+                className="input" 
+                value={newStudent.fatherName} 
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  setNewStudent({ ...newStudent, fatherName: val });
+                }} 
+                placeholder="Father's Name" 
+              />
             </div>
             <div className="field">
               <label>Phone Number</label>
-              <input className="input" value={newStudent.phone} onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })} placeholder="e.g. 9912345678" />
+              <input 
+                className="input" 
+                maxLength={10}
+                value={newStudent.phone} 
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  setNewStudent({ ...newStudent, phone: val });
+                  if (val.length === 10) setFieldErrors({ ...fieldErrors, phone: "" });
+                }} 
+                placeholder="e.g. 9912345678" 
+              />
+              {fieldErrors.phone && <div style={{ color: '#ef4444', fontSize: '0.75em', marginTop: '4px', fontWeight: 'bold' }}>{fieldErrors.phone}</div>}
             </div>
-            <div className="field" style={{ width: '100px' }}>
+            <div className="field">
               <label>Age</label>
               <input className="input" type="number" value={newStudent.age} onChange={(e) => setNewStudent({ ...newStudent, age: e.target.value })} placeholder="Years" />
             </div>

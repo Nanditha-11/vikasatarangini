@@ -102,20 +102,21 @@ studentsRouter.post("/", async (req, res) => {
     const normalizedPhone = String(phone).trim();
     const normalizedFatherName = String(fatherName || "").trim().toLowerCase();
 
-    // Duplicate Check
-    const potentialMatches = await Student.find({ 
-      phone: normalizedPhone, 
-      fatherName: normalizedFatherName
+    // Escape regex characters to avoid crashes with names like "Name (Place)"
+    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedName = escapeRegExp(String(name).trim());
+    const escapedFatherName = escapeRegExp(String(fatherName || "").trim());
+
+    // Duplicate Check - only if Name, Father Name, and Phone are ALL identical
+    const isDuplicate = await Student.findOne({ 
+      name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+      fatherName: { $regex: new RegExp(`^${escapedFatherName}$`, "i") },
+      phone: normalizedPhone,
+      slNo: { $ne: String(slNo || "").trim() }
     }).lean();
 
-    const isDuplicate = potentialMatches.some(m => {
-      if (m.slNo === String(slNo).trim()) return false;
-      const existingName = String(m.name).trim().toLowerCase();
-      return normalizedName.includes(existingName) || existingName.includes(normalizedName);
-    });
-
     if (isDuplicate) {
-      return res.status(400).json({ error: "Student already exists with similar details" });
+      return res.status(400).json({ error: "Student already exists with these exact details" });
     }
 
     if (!slNo) {

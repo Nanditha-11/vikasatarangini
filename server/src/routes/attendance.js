@@ -80,13 +80,19 @@ attendanceRouter.get("/:date", async (req, res) => {
   const admin = await Admin.findOne({ username }).lean();
   const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
 
+  const firstDoc = attendance || {};
+  const message = firstDoc.message;
+  const whatsappLink = firstDoc.whatsappLink;
+  const openingStock = firstDoc.openingStock || 0;
+
   res.json({
     date,
     total: students.length,
     presentCount: present.length,
     absentCount: absent.length,
-    message: attendance?.message || defaultMessage,
-    openingStock: attendance?.openingStock || 0,
+    message: message || defaultMessage,
+    whatsappLink: whatsappLink || admin?.whatsappLink || "",
+    openingStock: openingStock,
     previousOpeningStock,
     previousSoldStock,
     previousRemainingStock,
@@ -100,7 +106,7 @@ attendanceRouter.get("/:date", async (req, res) => {
 
 attendanceRouter.post("/:date/save", async (req, res) => {
   const { Student, Attendance } = req.tenantModels;
-  const { district, place } = req.user;
+  const { district, place, username } = req.user;
   
   const date = normalizeDateParam(req.params.date);
   if (!date) return res.status(400).json({ error: "Invalid date" });
@@ -113,6 +119,7 @@ attendanceRouter.post("/:date/save", async (req, res) => {
       remark: z.string().optional().default(""),
     })).default([]),
     message: z.string().optional().default(""),
+    whatsappLink: z.string().optional().default(""),
     openingStock: z.number().int().min(0).default(0),
   });
   const parsed = schema.safeParse(req.body);
@@ -131,12 +138,21 @@ attendanceRouter.post("/:date/save", async (req, res) => {
       presentStudents: parsed.data.presentStudents, 
       absentStudents: absentStudents,
       message: parsed.data.message,
+      whatsappLink: parsed.data.whatsappLink,
       openingStock: parsed.data.openingStock,
       district,
       place
     } },
     { upsert: true }
   );
+
+  // Update the Admin's default whatsappLink and message too if provided
+  if (parsed.data.whatsappLink || parsed.data.message) {
+    const update = {};
+    if (parsed.data.whatsappLink) update.whatsappLink = parsed.data.whatsappLink;
+    if (parsed.data.message) update.welcomeMessage = parsed.data.message;
+    await Admin.updateOne({ username }, { $set: update });
+  }
 
   res.json({ ok: true });
 });

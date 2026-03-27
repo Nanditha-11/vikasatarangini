@@ -18,6 +18,7 @@ const attendanceSchema = new mongoose.Schema(
       },
     ],
     message: { type: String, default: "" },
+    whatsappLink: { type: String, default: "" },
     openingStock: { type: Number, default: 0 },
     district: { type: String, index: true },
     place: { type: String, index: true },

@@ -40,6 +40,7 @@ export function AttendancePage() {
     error, setError,
     info,
     message, setMessage,
+    whatsappLink, setWhatsappLink,
     load,
     save
   } = useAttendance(paramDate, viewDistrict, viewPlace);
@@ -211,6 +212,7 @@ export function AttendancePage() {
             rows={rows} 
             viewDistrict={viewDistrict}
             viewPlace={viewPlace}
+            whatsappLink={whatsappLink}
           />
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
             {(() => {
@@ -353,6 +355,8 @@ export function AttendancePage() {
           <WhatsAppEditor
             message={message}
             setMessage={setMessage}
+            whatsappLink={whatsappLink}
+            setWhatsappLink={setWhatsappLink}
             onSave={() => save(true)}
             busy={busy}
           />
