@@ -259,6 +259,26 @@ a {
   box-shadow: inset 0 2px 4px rgba(100, 150, 200, 0.05), 0 0 0 3px rgba(198, 222, 241, 0.4);
 }
 
+/* Hide browser-specific password icons (two-eye issue) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
 .header-select {
   padding: 12px 16px;
   font-family: inherit;
