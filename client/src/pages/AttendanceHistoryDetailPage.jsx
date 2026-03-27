@@ -131,7 +131,7 @@ export function AttendanceHistoryDetailPage() {
               <tr style={{ background: '#f1f5f9' }}>
                 <th style={{ width: activeTab === 'new' ? '10%' : '8%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
                 <th style={{ width: activeTab === 'new' ? '20%' : '13%', textAlign: 'left', padding: '12px 5px' }}>Name</th>
-                <th style={{ width: activeTab === 'new' ? '20%' : '13%', textAlign: 'left', padding: '12px 5px' }}>Father Name</th>
+                <th style={{ width: activeTab === 'new' ? '20%' : '13%', textAlign: 'center', padding: '12px 5px' }}>Father Name</th>
                 <th style={{ width: activeTab === 'new' ? '10%' : '8%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
                 <th style={{ width: activeTab === 'new' ? '20%' : '12%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
                 {activeTab === 'present' ? (
@@ -166,7 +166,7 @@ export function AttendanceHistoryDetailPage() {
                   >
                     {s.name}
                   </td>
-                  <td style={{ padding: '12px 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.fatherName || "-"}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.fatherName || "-"}</td>
                   <td style={{ textAlign: 'center', padding: '12px 5px' }}>{s.age || "-"}</td>
                   <td style={{ textAlign: 'center', padding: '12px 5px' }}>{s.phone || "-"}</td>
                   {activeTab === 'present' && (
