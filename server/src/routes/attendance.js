@@ -298,9 +298,9 @@ attendanceRouter.get("/student/:slNo", async (req, res) => {
     };
   });
 
-  const uniqueDates = await Attendance.distinct("date", { type: "metadata" });
-  // Since distinct doesn't sort, we need to sort manually
-  const allDates = uniqueDates.sort((a, b) => b.localeCompare(a));
+  // Only show dates where a session actually happened (at least one student was marked present globally)
+  const activeDates = await Attendance.distinct("date", { type: "student" });
+  const allDates = activeDates.sort((a, b) => b.localeCompare(a));
   const presentDates = new Set(history.map(h => h.date));
   
   const fullLog = allDates.map(d => {
