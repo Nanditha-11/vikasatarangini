@@ -60,6 +60,11 @@ export function StudentHistoryLog({ student, onClose }) {
             <p className="muted">No attendance records found.</p>
           ) : (
             <div className="timeline">
+              <div className="timeline-header">
+                <div className="date">Date</div>
+                <div className="status">Status</div>
+                <div className="details" style={{ textAlign: 'left' }}>Medicine Details</div>
+              </div>
               {history.map((h, i) => (
                 <div key={i} className={`timeline-item ${h.present ? 'present' : 'absent'}`}>
                   <div className="date">

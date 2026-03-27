@@ -849,9 +849,26 @@ tbody tr:last-child td {
   gap: 12px;
 }
 
+.timeline-header {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  padding: 8px 20px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.timeline-header div {
+  font-size: 0.75em;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .timeline-item {
   display: grid;
-  grid-template-columns: 140px 100px 1fr;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
   padding: 14px 20px;
   background: #fff;
@@ -897,7 +914,7 @@ tbody tr:last-child td {
   font-size: 0.85em;
   display: flex;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .timeline-item .qty {
