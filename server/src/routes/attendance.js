@@ -176,43 +176,42 @@ attendanceRouter.post("/:date/save", async (req, res) => {
 attendanceRouter.get("/list/history", async (req, res) => {
   const { Student, Attendance } = req.tenantModels;
   try {
-    const [allAttendance, totalStudents] = await Promise.all([
-      Attendance.find({}).sort({ date: -1 }).lean(),
+    const [allMetadata, totalStudents] = await Promise.all([
+      Attendance.find({ type: "metadata" }).sort({ date: -1 }).lean(),
       Student.countDocuments({})
     ]);
 
-    const history = allAttendance.map(att => {
-      const presentCount = (att.presentStudents || []).length;
+    const history = await Promise.all(allMetadata.map(async (meta) => {
+      const studentDocs = await Attendance.find({ date: meta.date, type: "student" }).lean();
       
-      let absentCount = (att.absentStudents || []).length;
-      if (absentCount === 0 && presentCount > 0) {
-        absentCount = Math.max(0, totalStudents - presentCount);
-      }
+      const presentCount = studentDocs.length;
+      const totalSold = studentDocs.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
       
-      const stats = (att.presentStudents || []).reduce((acc, p) => {
+      const stats = studentDocs.reduce((acc, p) => {
         const qty = Number(p.quantity) || 0;
-        const isOnline = p.paymentMethod === 'Online' || p.paymentMethod === 'Online Payment';
-        const isCash = p.paymentMethod === 'Cash';
-        const isFree = p.paymentMethod === 'Free';
+        const method = p.paymentMethod || "Cash";
 
-        if (isCash) { acc.cashQty += qty; acc.cashAmount += qty * 70; }
-        else if (isOnline) { acc.onlineQty += qty; acc.onlineAmount += qty * 70; }
-        else if (isFree) { acc.freeQty += qty; }
-        
+        if (method === "Cash") { acc.cashQty += qty; acc.cashAmount += qty * 70; }
+        else if (method === "Online" || method === "Online Payment") { acc.onlineQty += qty; acc.onlineAmount += qty * 70; }
+        else if (method === "Free") { acc.freeQty += qty; }
         return acc;
       }, { cashQty: 0, cashAmount: 0, onlineQty: 0, onlineAmount: 0, freeQty: 0 });
 
       return {
-        date: att.date,
+        date: meta.date,
         presentCount,
-        absentCount,
-        totalSold: (att.presentStudents || []).reduce((acc, p) => acc + (Number(p.quantity) || 0), 0),
+        absentCount: Math.max(0, totalStudents - presentCount),
+        totalSold,
         revenue: stats.cashAmount + stats.onlineAmount,
         stats
       };
-    });
-    res.json(history);
+    }));
+
+    // Filter out dates that have no attendance marked (only metadata saved but no students)
+    const activeHistory = history.filter(h => h.presentCount > 0);
+    res.json(activeHistory);
   } catch (err) {
+    console.error("[History List Error]", err);
     res.status(500).json({ error: err.message });
   }
 });
