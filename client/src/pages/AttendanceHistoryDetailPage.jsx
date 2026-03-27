@@ -129,11 +129,11 @@ export function AttendanceHistoryDetailPage() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                <th style={{ width: activeTab === 'present' ? '8%' : '10%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
-                <th style={{ width: activeTab === 'present' ? '13%' : activeTab === 'new' ? '20%' : '25%', textAlign: 'left', padding: '12px 25px' }}>Name</th>
-                <th style={{ width: activeTab === 'present' ? '13%' : activeTab === 'new' ? '20%' : '25%', textAlign: 'center', padding: '12px 5px' }}>Father Name</th>
-                <th style={{ width: activeTab === 'present' ? '8%' : activeTab === 'new' ? '10%' : '15%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
-                <th style={{ width: activeTab === 'present' ? '12%' : activeTab === 'new' ? '20%' : '25%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
+                <th style={{ width: activeTab === 'present' ? '8%' : activeTab === 'new' ? '16.6%' : '20%', textAlign: 'center', padding: '12px 5px' }}>ID</th>
+                <th style={{ width: activeTab === 'present' ? '13%' : activeTab === 'new' ? '16.6%' : '20%', textAlign: 'left', padding: '12px 15px' }}>Name</th>
+                <th style={{ width: activeTab === 'present' ? '13%' : activeTab === 'new' ? '16.6%' : '20%', textAlign: 'center', padding: '12px 5px' }}>Father Name</th>
+                <th style={{ width: activeTab === 'present' ? '8%' : activeTab === 'new' ? '16.6%' : '20%', textAlign: 'center', padding: '12px 5px' }}>Age</th>
+                <th style={{ width: activeTab === 'present' ? '12%' : activeTab === 'new' ? '16.6%' : '20%', textAlign: 'center', padding: '12px 5px' }}>Phone</th>
                 {activeTab === 'present' ? (
                   <>
                     <th style={{ width: '11%', textAlign: 'center', padding: '12px 5px' }}>Method</th>
@@ -142,7 +142,7 @@ export function AttendanceHistoryDetailPage() {
                     <th style={{ width: '16%', textAlign: 'center', padding: '12px 5px' }}>Remarks</th>
                   </>
                 ) : activeTab === 'new' ? (
-                  <th style={{ width: '20%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
+                  <th style={{ width: '16.6%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
                 ) : null}
               </tr>
             </thead>
@@ -152,7 +152,7 @@ export function AttendanceHistoryDetailPage() {
                   <td style={{ fontWeight: 'bold', textAlign: 'center', padding: '12px 5px' }}>{s.slNo}</td>
                   <td 
                     style={{ 
-                      padding: '12px 25px', 
+                      padding: '12px 15px', 
                       color: '#2563eb', 
                       cursor: 'pointer',
                       textDecoration: 'underline',
