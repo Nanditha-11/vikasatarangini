@@ -126,6 +126,18 @@ attendanceRouter.post("/:date/save", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
   const allStudents = await Student.find({}).lean();
+  const studentMap = new Map(allStudents.map(s => [s.slNo, s]));
+  
+  const enrichedPresent = parsed.data.presentStudents.map(p => {
+    const student = studentMap.get(p.slNo) || {};
+    return {
+      ...p,
+      name: student.name || "",
+      fatherName: student.fatherName || "",
+      phone: student.phone || ""
+    };
+  });
+
   const presentSlNos = new Set(parsed.data.presentStudents.map(p => p.slNo));
   const absentStudents = allStudents
     .filter(s => !presentSlNos.has(s.slNo))
@@ -135,7 +147,7 @@ attendanceRouter.post("/:date/save", async (req, res) => {
     { date },
     { $set: { 
       date, 
-      presentStudents: parsed.data.presentStudents, 
+      presentStudents: enrichedPresent, 
       absentStudents: absentStudents,
       message: parsed.data.message,
       whatsappLink: parsed.data.whatsappLink,

@@ -19,6 +19,9 @@ const AttendanceSchema = new mongoose.Schema({
   presentStudents: [
     {
       slNo: { type: String, required: true },
+      name: { type: String },
+      fatherName: { type: String },
+      phone: { type: String },
       paymentMethod: { type: String, enum: ["Cash", "Online", "Free"], default: "Cash" },
       quantity: { type: Number, default: 0 },
       remark: { type: String, default: "" },
