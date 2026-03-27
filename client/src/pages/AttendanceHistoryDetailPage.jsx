@@ -129,9 +129,9 @@ export function AttendanceHistoryDetailPage() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                <th style={{ width: '8%', textAlign: 'center', padding: '12px 8px' }}>ID</th>
-                <th style={{ width: '22%', textAlign: 'left', padding: '12px 15px' }}>Name</th>
-                <th style={{ width: '18%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
+                <th style={{ width: '6%', textAlign: 'center', padding: '12px 8px' }}>ID</th>
+                <th style={{ width: '15%', textAlign: 'left', padding: '12px 8px' }}>Name</th>
+                <th style={{ width: '25%', textAlign: 'left', padding: '12px 8px' }}>Father Name</th>
                 <th style={{ width: '7%', textAlign: 'center', padding: '12px 8px' }}>Age</th>
                 <th style={{ width: '14%', textAlign: 'center', padding: '12px 8px' }}>Phone</th>
                 {activeTab === 'present' ? (
@@ -152,7 +152,7 @@ export function AttendanceHistoryDetailPage() {
                   <td style={{ fontWeight: 'bold', textAlign: 'center', padding: '12px 8px' }}>{s.slNo}</td>
                   <td 
                     style={{ 
-                      padding: '12px 15px', 
+                      padding: '12px 8px', 
                       color: '#2563eb', 
                       cursor: 'pointer',
                       textDecoration: 'underline',
