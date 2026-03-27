@@ -9,6 +9,7 @@ import { StudentHistoryLog } from "../components/StudentHistoryLog";
 import { WhatsAppEditor } from "../components/WhatsAppEditor";
 import { StudentAdmin } from "../components/StudentAdmin";
 import { MarkingModal } from "../components/MarkingModal";
+import { ModifyModal } from "../components/ModifyModal";
 import { toIsoDate, todayParts } from "../lib/date";
 
 
@@ -49,6 +50,7 @@ export function AttendancePage() {
   const [viewMode, setViewMode] = useState("marking"); // marking | crosscheck | summary
   const [historyStudent, setHistoryStudent] = useState(null);
   const [markingStudent, setMarkingStudent] = useState(null);
+  const [modifyingStudent, setModifyingStudent] = useState(null);
 
   useEffect(() => {
     if (isMaster && viewDistrict) {
@@ -145,6 +147,16 @@ export function AttendancePage() {
       absentCount: rows.length - pres
     };
   }, [rows]);
+
+  const handleConfirmModify = async ({ qty, remark }) => {
+    if (!modifyingStudent) return;
+    const nextRows = rows.map(r =>
+      r.slNo === modifyingStudent.slNo ? { ...r, quantity: Number(qty), remark: remark } : r
+    );
+    setRows(nextRows);
+    await save(false, nextRows);
+    setModifyingStudent(null);
+  };
 
   const paymentStats = useMemo(() => {
     let cashQty = 0;
@@ -343,6 +355,7 @@ export function AttendancePage() {
               setFilter={setFilter}
               onToggle={toggleStudent}
               onMarkClick={setMarkingStudent}
+              onModifyClick={setModifyingStudent}
               onUpdateQuantity={updateQuantity}
               onViewHistory={setHistoryStudent}
               busy={busy}
@@ -377,6 +390,14 @@ export function AttendancePage() {
           isOpen={!!markingStudent}
           onClose={() => setMarkingStudent(null)}
           onConfirm={handleConfirmMarking}
+        />
+      )}
+      {modifyingStudent && (
+        <ModifyModal
+          student={modifyingStudent}
+          isOpen={!!modifyingStudent}
+          onClose={() => setModifyingStudent(null)}
+          onConfirm={handleConfirmModify}
         />
       )}
     </Layout>

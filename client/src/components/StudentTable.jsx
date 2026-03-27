@@ -85,8 +85,13 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                   </div>
                     <div style={{ textAlign: 'right' }}>
                       <button className="btn primary" style={{ display: 'block', width: '100%', marginBottom: '8px' }} onClick={() => onViewHistory(r)}>
-                        View Full History
+                        View Details
                       </button>
+                      {r.present && onModifyClick && (
+                        <button className="btn" style={{ borderColor: '#2563eb', color: '#2563eb', width: '100%', marginBottom: '8px' }} onClick={() => onModifyClick(r)}>
+                            Modify Details
+                        </button>
+                      )}
                       {!r.present && (
                         <button className="btn" style={{ borderColor: '#059669', color: '#059669', width: '100%', marginBottom: '8px' }} onClick={() => onMarkClick(r)}>
                             Mark Present
