@@ -7,10 +7,18 @@ const authRouter = express.Router();
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
     pass: process.env.GMAIL_PASS || "ykod qvle rvyq auih"
-  }
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000, // 10s
+  greetingTimeout: 10000,
 });
 
 // Memory store for OTPs: email/identifier -> { otp, expiry }
