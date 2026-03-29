@@ -34,12 +34,10 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
         newStudents: data.newStudents || [],
       });
       
-      // Only reset template/link if we're loading a fresh date or if they aren't set yet
-      if (d !== lastLoadedDate.current || !whatsappLink) {
-        setMessage(data.message || "Jai Srimannarayana! Thank you for attending the session today.");
-        setWhatsappLink(data.whatsappLink || "");
-        lastLoadedDate.current = d;
-      }
+      // Update message/link if provided by server, otherwise keep current state
+      if (data.message && data.message !== message) setMessage(data.message);
+      if (data.whatsappLink && data.whatsappLink !== whatsappLink) setWhatsappLink(data.whatsappLink);
+      lastLoadedDate.current = d;
       
       const prevRem = data.previousRemainingStock || 0;
       setPreviousRemainingStock(prevRem);
