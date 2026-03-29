@@ -8,8 +8,8 @@ const authRouter = express.Router();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // Use STARTTLS
   auth: {
     user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
     pass: process.env.GMAIL_PASS || "ykod qvle rvyq auih"
@@ -17,8 +17,8 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false
   },
-  connectionTimeout: 10000, // 10s
-  greetingTimeout: 10000,
+  connectionTimeout: 15000, // 15s
+  greetingTimeout: 15000,
 });
 
 // Memory store for OTPs: email/identifier -> { otp, expiry }
