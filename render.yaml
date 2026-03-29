@@ -14,9 +14,9 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: GMAIL_USER
-        value: swarnamrutham3@gmail.com
+        sync: false
       - key: GMAIL_PASS
-        value: "ykod qvle rvyq auih"
+        sync: false
       - key: WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID

@@ -11,13 +11,13 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // Use STARTTLS
   auth: {
-    user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-    pass: process.env.GMAIL_PASS || "ykod qvle rvyq auih"
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS
   },
   tls: {
     rejectUnauthorized: false
   },
-  connectionTimeout: 15000, // 15s
+  connectionTimeout: 15000, 
   greetingTimeout: 15000,
 });
 
@@ -37,7 +37,7 @@ authRouter.post("/send-register-otp", async (req, res) => {
   });
 
   const mailOptions = {
-    from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
+    from: process.env.GMAIL_USER,
     to: email,
     subject: "Vikasa Tarangini - Registration OTP",
     text: `Your 4-digit OTP for registration is: ${code}. It will expire in 10 minutes.`
