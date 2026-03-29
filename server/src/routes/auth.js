@@ -7,19 +7,15 @@ const authRouter = express.Router();
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Port 465 uses SSL
   auth: {
     user: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
     pass: process.env.GMAIL_PASS || "ksww xizh vhzc anml"
   },
   tls: {
-    rejectUnauthorized: false,
-    minVersion: "TLSv1.2"
+    rejectUnauthorized: false
   },
-  connectionTimeout: 20000, 
-  greetingTimeout: 20000,
+  connectionTimeout: 15000, 
+  greetingTimeout: 15000,
 });
 
 // Memory store for OTPs: email/identifier -> { otp, expiry }
@@ -308,7 +304,7 @@ authRouter.post("/register", async (req, res) => {
       };
 
       await transporter.sendMail(adminMailOptions);
-      console.log(`[AUTH] Registration notification sent to smarnamrutham3@gmail.com for ${username}`);
+      console.log(`[AUTH] Registration notification sent to swarnamrutham3@gmail.com for ${username}`);
     } catch (mailErr) {
       console.error("Failed to send registration notification email:", mailErr);
       // Don't fail the registration if only the email fails
