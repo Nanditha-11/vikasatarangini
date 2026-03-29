@@ -11,6 +11,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
   const [inquiryPhone, setInquiryPhone] = useState("");
   const [inquiryResults, setInquiryResults] = useState(null);
   const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [autoInquiryResults, setAutoInquiryResults] = useState(null);
 
   useEffect(() => {
     // 1. Fetch location defaults - include district/place for Master Admin
@@ -34,6 +35,22 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       })
       .catch(err => console.error("[StudentAdmin] Failed to load admin profile:", err));
   }, [viewDistrict, viewPlace]);
+  
+  useEffect(() => {
+    if (newStudent.phone?.length === 10) {
+      apiFetch(`/api/students/inquiry/${newStudent.phone}`)
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            setAutoInquiryResults(data.results);
+          } else {
+            setAutoInquiryResults(null);
+          }
+        })
+        .catch(err => console.error("Auto-inquiry failed:", err));
+    } else {
+      setAutoInquiryResults(null);
+    }
+  }, [newStudent.phone]);
 
   const handleInquiry = async () => {
     if (!inquiryPhone || inquiryPhone.length !== 10) {
@@ -137,6 +154,25 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               return max + 1;
             })()}
           </div>
+          {autoInquiryResults && (
+            <div style={{ marginBottom: '15px', padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af' }}>
+              <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🔍 Global Match Found
+              </div>
+              <div style={{ fontSize: '0.85em', marginTop: '4px' }}>
+                This student is registered in: <strong>{autoInquiryResults.map(r => r.place).join(", ")}</strong>.
+                <button 
+                  onClick={() => {
+                    setInquiryResults(autoInquiryResults);
+                    setShowInquiryModal(true);
+                  }}
+                  style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}
+                >
+                  View Full History
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid" style={{ gridTemplateColumns: '1.5fr 1.5fr 1.2fr 0.8fr', gap: '12px' }}>
             <div className="field">
               <label>Student Name</label>
