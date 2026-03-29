@@ -4,11 +4,69 @@ const { requireAuth } = require("../lib/auth");
 const { tenantMiddleware } = require("../lib/tenantMiddleware");
 const { parseStudentsFromExcel } = require("../lib/excel");
 const Admin = require("../models/Admin");
+const { getTenantDb } = require("../lib/db");
+const { getTenantModels } = require("../lib/tenantModels");
 
 const studentsRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// All student routes require auth and tenant isolation
+
+// Global Inquiry - Search across ALL locations by phone
+// Must be BEFORE tenantMiddleware to allow cross-tenant search
+studentsRouter.get("/inquiry/:phone", requireAuth, async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const normalizedPhone = String(phone).trim();
+
+    // 1. Get all approved admins to search their databases
+    const admins = await Admin.find({ role: 'admin', status: 'approved' }).lean();
+    
+    // 2. Results to collect
+    const results = [];
+
+    // 3. Search each tenant DB
+    // Note: This could be optimized later with a global index, but works for the current scale
+    for (const admin of admins) {
+      if (!admin.username) continue;
+      
+      try {
+        const tenantDb = getTenantDb(admin.username);
+        const { Student, Attendance } = getTenantModels(tenantDb);
+        const student = await Student.findOne({ phone: normalizedPhone }).lean();
+        
+        if (student) {
+          // Found student in this location! Now get their history
+          const history = await Attendance.find({ 
+            slNo: student.slNo, 
+            type: 'student' 
+          }).sort({ date: -1 }).lean();
+
+          results.push({
+            district: admin.district,
+            place: admin.place,
+            studentName: student.name,
+            slNo: student.slNo,
+            history: history.map(h => ({
+              date: h.date,
+              quantity: h.quantity,
+              paymentMethod: h.paymentMethod,
+              remark: h.remark
+            }))
+          });
+        }
+      } catch (e) {
+        console.error(`[GlobalInquiry] Error searching tenant ${admin.username}:`, e);
+      }
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error("[GlobalInquiry Error]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// All other student routes require auth and tenant isolation
 studentsRouter.use(requireAuth, tenantMiddleware);
 
 // Helper to get Student model from request (dynamically scoped to tenant DB)

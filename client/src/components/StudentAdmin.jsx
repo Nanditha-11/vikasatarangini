@@ -8,6 +8,9 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
   const [successData, setSuccessData] = useState(null);
   const [config, setConfig] = useState(null);
   const [adminProfile, setAdminProfile] = useState(null);
+  const [inquiryPhone, setInquiryPhone] = useState("");
+  const [inquiryResults, setInquiryResults] = useState(null);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
 
   useEffect(() => {
     // 1. Fetch location defaults - include district/place for Master Admin
@@ -31,6 +34,24 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       })
       .catch(err => console.error("[StudentAdmin] Failed to load admin profile:", err));
   }, [viewDistrict, viewPlace]);
+
+  const handleInquiry = async () => {
+    if (!inquiryPhone || inquiryPhone.length !== 10) {
+      alert("Please enter a valid 10-digit phone number");
+      return;
+    }
+    setBusy(true);
+    setInquiryResults(null);
+    try {
+      const data = await apiFetch(`/api/students/inquiry/${inquiryPhone}`);
+      setInquiryResults(data.results || []);
+      setShowInquiryModal(true);
+    } catch (err) {
+      setError(err.message || "Global Inquiry failed");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleAddManual = async () => {
     const errors = {};
@@ -91,6 +112,17 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <h3 style={{ margin: 0 }}>Student Management</h3>
         <div className="row" style={{ gap: '10px' }}>
+          <div className="row" style={{ gap: '10px', background: 'rgba(255,255,255,0.7)', padding: '5px 15px', borderRadius: '50px', border: '1px solid #e2e8f0' }}>
+            <input 
+              type="text" 
+              placeholder="🔍 Search all locations by phone..." 
+              value={inquiryPhone}
+              onChange={(e) => setInquiryPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              onKeyDown={(e) => e.key === 'Enter' && handleInquiry()}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.9em', color: '#000000', fontWeight: 'bold' }}
+            />
+            <button className="btn" onClick={handleInquiry} disabled={busy} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0' }}>Search</button>
+          </div>
           <button className="btn primary" style={{ background: '#3b82f6', borderColor: '#3b82f6', color: '#000000' }} onClick={() => setShowAddManual(!showAddManual)}>
             {showAddManual ? "✕ Close" : "👤 Add New Student"}
           </button>
@@ -207,6 +239,59 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               >
                 Not Now
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInquiryModal && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="card" style={{ maxWidth: '600px', width: '90%', padding: '0', overflow: 'hidden' }}>
+            <div style={{ background: '#0d2866', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>Global Inquiry Result</h3>
+              <button onClick={() => setShowInquiryModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '1.2em', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+              {inquiryResults?.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div style={{ fontSize: '3em' }}>🕵️</div>
+                  <h3>No Record Found</h3>
+                  <p className="muted">This phone number has not been registered in any location yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {inquiryResults.map((res, i) => (
+                    <div key={i} className="card" style={{ border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#0d2866', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>📍 {res.place} ({res.district})</span>
+                        <span style={{ color: '#000000', fontSize: '0.8em' }}>ID: {res.slNo}</span>
+                      </div>
+                      <div style={{ fontSize: '0.9em', marginBottom: '15px', color: '#475569' }}>
+                        Student Name: <strong style={{color:'#000000'}}>{res.studentName}</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                        <div style={{ fontSize: '0.85em', fontWeight: 'bold', marginBottom: '8px' }}>Medicine History:</div>
+                        {res.history?.length === 0 ? (
+                          <div style={{ fontSize: '0.85em', color: '#64748b', fontStyle: 'italic' }}>No medicine intake recorded here.</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {res.history.map((h, j) => (
+                              <div key={j} style={{ fontSize: '0.8em', display: 'flex', justifyContent: 'space-between', background: '#ffffff', padding: '5px 8px', borderRadius: '4px' }}>
+                                <span>📅 {h.date}</span>
+                                <span>💊 {h.quantity} qty</span>
+                                <span style={{ color: '#0d2866', fontWeight: 'bold' }}>{h.paymentMethod}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '15px 20px', background: '#f1f5f9', textAlign: 'center' }}>
+              <button className="btn primary" onClick={() => setShowInquiryModal(false)} style={{width:'100%'}}>Done</button>
             </div>
           </div>
         </div>
