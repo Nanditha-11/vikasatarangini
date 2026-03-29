@@ -3,6 +3,7 @@ const multer = require("multer");
 const { requireAuth } = require("../lib/auth");
 const { tenantMiddleware } = require("../lib/tenantMiddleware");
 const { parseStudentsFromExcel } = require("../lib/excel");
+const Admin = require("../models/Admin");
 
 const studentsRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -12,6 +13,15 @@ studentsRouter.use(requireAuth, tenantMiddleware);
 
 // Helper to get Student model from request (dynamically scoped to tenant DB)
 const getStudentModel = (req) => req.tenantModels.Student;
+
+function toTitleCase(str) {
+  if (!str) return "";
+  return str
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+    .trim();
+}
 
 async function getNextSlNo(req) {
   const Student = getStudentModel(req);
@@ -58,8 +68,8 @@ studentsRouter.post("/upload", upload.single("file"), async (req, res) => {
           update: {
             $set: {
               slNo,
-              name: s.name,
-              fatherName: s.fatherName || "",
+              name: toTitleCase(s.name),
+              fatherName: toTitleCase(s.fatherName),
               age: s.age ?? null,
               phone: s.phone,
               // We still keep district/place context in case they move
@@ -122,8 +132,8 @@ studentsRouter.post("/", async (req, res) => {
       {
         $set: {
           slNo: numericSlNo,
-          name: String(name).trim(),
-          fatherName: String(fatherName || "").trim(),
+          name: toTitleCase(name),
+          fatherName: toTitleCase(fatherName),
           age: Number.isFinite(Number(age)) ? Number(age) : null,
           phone: String(phone).trim(),
           district,
@@ -146,9 +156,17 @@ studentsRouter.put("/:slNo", async (req, res) => {
     const { slNo } = req.params;
     const { name, fatherName, age, phone, password } = req.body;
 
-    const expectedPass = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expectedPass && password !== "vikasa") {
-      return res.status(401).json({ error: "Incorrect password" });
+    // Check against current admin's password OR master password
+    const admin = await Admin.findOne({ 
+      username: { $regex: new RegExp(`^${req.user.username}$`, "i") },
+      district: req.user.district,
+      place: req.user.place
+    }).lean();
+    const isMasterPass = password === "swarnamrutham";
+    const isAdminPass = admin && password === admin.password;
+
+    if (!isMasterPass && !isAdminPass) {
+      return res.status(401).json({ error: "Incorrect user login password" });
     }
 
     if (!name || !phone) {
@@ -159,8 +177,8 @@ studentsRouter.put("/:slNo", async (req, res) => {
       { slNo },
       {
         $set: {
-          name: String(name).trim(),
-          fatherName: String(fatherName || "").trim(),
+          name: toTitleCase(name),
+          fatherName: toTitleCase(fatherName),
           age: Number.isFinite(Number(age)) ? Number(age) : null,
           phone: String(phone).trim(),
         },
@@ -185,11 +203,17 @@ studentsRouter.delete("/:slNo", async (req, res) => {
     const { slNo: rawSlNo } = req.params;
     const slNo = rawSlNo ? rawSlNo.trim() : "";
 
-    if (password !== "swarnamrutham") {
-      const expectedPass = process.env.ADMIN_PASSWORD || "admin123";
-      if (password !== expectedPass) {
-        return res.status(401).json({ error: "Invalid admin password for deletion" });
-      }
+    // Check against current admin's password OR master password
+    const admin = await Admin.findOne({ 
+      username: { $regex: new RegExp(`^${req.user.username}$`, "i") },
+      district: req.user.district,
+      place: req.user.place
+    }).lean();
+    const isMasterPass = password === "swarnamrutham";
+    const isAdminPass = admin && password === admin.password;
+
+    if (!isMasterPass && !isAdminPass) {
+      return res.status(401).json({ error: "Invalid admin password for deletion" });
     }
 
     const result = await Student.deleteOne({ slNo });
@@ -207,8 +231,16 @@ studentsRouter.post("/delete-all", async (req, res) => {
     const Student = getStudentModel(req);
     const { password } = req.body;
 
-    const expectedPass = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expectedPass) {
+    // Check against current admin's password OR master password
+    const admin = await Admin.findOne({ 
+      username: { $regex: new RegExp(`^${req.user.username}$`, "i") },
+      district: req.user.district,
+      place: req.user.place
+    }).lean();
+    const isMasterPass = password === "swarnamrutham";
+    const isAdminPass = admin && password === admin.password;
+
+    if (!isMasterPass && !isAdminPass) {
       return res.status(401).json({ error: "Invalid admin password for mass deletion" });
     }
 

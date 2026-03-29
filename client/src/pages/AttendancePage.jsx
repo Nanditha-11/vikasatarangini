@@ -346,9 +346,6 @@ export function AttendancePage() {
                     {summaryLists.present.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
-                        <div className="muted" style={{ fontSize: '0.85em' }}>
-                          Father: {s.fatherName || '-'} | Phone: {s.phone}
-                        </div>
                       </li>
                     ))}
                     {summaryLists.present.length === 0 && <p className="muted">No students marked present.</p>}
@@ -361,9 +358,6 @@ export function AttendancePage() {
                     {summaryLists.absent.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
-                        <div className="muted" style={{ fontSize: '0.85em' }}>
-                          Father: {s.fatherName || '-'} | Phone: {s.phone}
-                        </div>
                       </li>
                     ))}
                     {summaryLists.absent.length === 0 && <p className="muted">All students are present.</p>}
@@ -376,9 +370,6 @@ export function AttendancePage() {
                     {summaryLists.new.map(s => (
                       <li key={s.slNo} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <div style={{ fontWeight: 'bold' }}>{s.slNo} - {s.name}</div>
-                        <div className="muted" style={{ fontSize: '0.85em' }}>
-                          Father: {s.fatherName || '-'} | Phone: {s.phone}
-                        </div>
                       </li>
                     ))}
                     {summaryLists.new.length === 0 && <p className="muted">No new students today.</p>}

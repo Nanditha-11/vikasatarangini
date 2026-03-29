@@ -17,10 +17,12 @@ const transporter = nodemailer.createTransport({
 const otpStore = new Map();
 
 authRouter.post("/send-register-otp", async (req, res) => {
-  const { email } = req.body || {};
+  let { email } = req.body || {};
   if (!email) return res.status(400).json({ error: "Email is required" });
+  email = email.toLowerCase().trim();
 
   const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
+  console.log(`[AUTH] Registration OTP for ${email}: ${code}`);
   otpStore.set(email, {
     otp: String(code),
     expiry: Date.now() + 10 * 60 * 1000 // 10 mins
@@ -120,7 +122,10 @@ authRouter.get("/me", requireAuth, async (req, res) => {
 });
 
 authRouter.post("/forgot-password", async (req, res) => {
-  const { email } = req.body || {};
+  let { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: "Email or username is required" });
+  email = email.toLowerCase().trim();
+
   const admin = await Admin.findOne({
     $or: [
       { email: { $regex: new RegExp(`^${email}$`, "i") } },
@@ -130,16 +135,18 @@ authRouter.post("/forgot-password", async (req, res) => {
   if (!admin) {
     return res.status(400).json({ error: "Invalid admin email or username" });
   }
+  // Use the actual email from the database for the OTP key
+  const actualEmail = admin.email.toLowerCase();
 
   const code = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
-  otpStore.set(email, {
+  otpStore.set(actualEmail, {
     otp: String(code),
     expiry: Date.now() + 10 * 60 * 1000 // 10 mins
   });
 
   const mailOptions = {
     from: process.env.GMAIL_USER || "swarnamrutham3@gmail.com",
-    to: email,
+    to: actualEmail,
     subject: "Admin Password Reset - OTP",
     text: `Your 4-digit OTP for resetting the password is: ${code}. It will expire in 10 minutes.`
   };
@@ -164,8 +171,9 @@ function isPasswordComplex(password) {
 }
 
 authRouter.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body || {};
+  let { email, otp } = req.body || {};
   if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+  email = email.toLowerCase().trim();
   
   const record = otpStore.get(email);
   if (!record || record.otp !== String(otp) || Date.now() > record.expiry) {
@@ -175,8 +183,9 @@ authRouter.post("/verify-otp", async (req, res) => {
 });
 
 authRouter.post("/reset-password", async (req, res) => {
-  const { email, otp, newPassword } = req.body || {};
+  let { email, otp, newPassword } = req.body || {};
   if (!email || !otp || !newPassword) return res.status(400).json({ error: "Missing fields" });
+  email = email.toLowerCase().trim();
 
   const record = otpStore.get(email);
   if (!record || record.otp !== String(otp) || Date.now() > record.expiry) {
@@ -215,6 +224,7 @@ authRouter.post("/reset-password", async (req, res) => {
 authRouter.post("/register", async (req, res) => {
   try {
     let { username, password, email, district, place, whatsappLink, otp } = req.body;
+    email = email?.toLowerCase().trim();
     
     // Verify OTP one last time during final registration
     const record = otpStore.get(email);

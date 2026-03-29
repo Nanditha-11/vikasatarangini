@@ -110,10 +110,14 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               <label>Student Name</label>
               <input
                 className="input"
+                style={{ textTransform: 'capitalize' }}
                 value={newStudent.name}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
-                  setNewStudent({ ...newStudent, name: val });
+                  let val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  // Automatically capitalize the first letter of each word but ALLOW subsequent capitals
+                  const words = val.split(" ");
+                  const capped = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                  setNewStudent({ ...newStudent, name: capped });
                   if (val.trim()) setFieldErrors({ ...fieldErrors, name: "" });
                 }}
                 placeholder="Full Name"
@@ -124,10 +128,13 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               <label>Father Name</label>
               <input
                 className="input"
+                style={{ textTransform: 'capitalize' }}
                 value={newStudent.fatherName}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
-                  setNewStudent({ ...newStudent, fatherName: val });
+                  let val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  const words = val.split(" ");
+                  const capped = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                  setNewStudent({ ...newStudent, fatherName: capped });
                 }}
                 placeholder="Father's Name"
               />

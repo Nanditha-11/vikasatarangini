@@ -75,7 +75,7 @@ export function AboutPage() {
           <div style={{ fontWeight: 'bold', fontStyle: 'italic' }}>
             <div style={{ fontSize: '1rem', marginBottom: '8px' }}>Developed by</div>
             <div style={{ fontSize: '1.4rem', marginBottom: '4px' }}>Adavelly Nanditha</div>
-            <div style={{ fontSize: '1.4rem' }}>Yathipathi Sathyadarsahan</div>
+            <div style={{ fontSize: '1.4rem' }}>Yathipathi Sathyadarshan</div>
           </div>
         </div>
       </div>

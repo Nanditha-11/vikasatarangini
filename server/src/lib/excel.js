@@ -133,6 +133,7 @@ function buildAttendanceWorkbook({ date, present, absent, newStudents = [], open
       "Payment Method": method,
       "Quantity": qty,
       "Total Amount": totalAmount,
+      "Review": s.remark || "",
       "Date": date,
     };
   };

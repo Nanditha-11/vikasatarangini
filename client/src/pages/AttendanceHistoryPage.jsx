@@ -45,8 +45,8 @@ export function AttendanceHistoryPage() {
               }}
               onClick={() => nav(`/history/${record.date}${location.search}`)}
               >
-                <div className="row" style={{ justifyContent: 'center', padding: '10px 0' }}>
-                  <h3 style={{ margin: 0, color: '#0d2866', fontSize: '1.4em' }}>{record.date.split('-').reverse().join('-')}</h3>
+                <div style={{ padding: '10px 0', textAlign: 'center' }}>
+                  <h3 style={{ margin: 0, color: '#0d2866', fontSize: '1.2em' }}>{record.date.split('-').reverse().join('-')}</h3>
                 </div>
               </div>
             ))}

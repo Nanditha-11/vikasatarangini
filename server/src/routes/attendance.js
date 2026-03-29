@@ -77,7 +77,12 @@ attendanceRouter.get("/:date", async (req, res) => {
     present: presentMap.has(s.slNo) 
   })).sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
 
-  const admin = await Admin.findOne({ username }).lean();
+  const { district, place } = req.user;
+  const admin = await Admin.findOne({ 
+    district: { $regex: new RegExp(`^${district}$`, "i") },
+    place: { $regex: new RegExp(`^${place}$`, "i") },
+    role: "admin"
+  }).lean();
   const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
 
   res.json({
@@ -165,7 +170,7 @@ attendanceRouter.post("/:date/save", async (req, res) => {
     const update = {};
     if (parsed.data.whatsappLink) update.whatsappLink = parsed.data.whatsappLink;
     if (parsed.data.message) update.welcomeMessage = parsed.data.message;
-    await Admin.updateOne({ username }, { $set: update });
+    await Admin.updateOne({ district, place, role: "admin" }, { $set: update });
   }
 
   res.json({ ok: true });

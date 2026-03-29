@@ -121,11 +121,11 @@ export function ModifyModal({ student, isOpen, onClose, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: '30px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e40af' }}>Remark</label>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e40af' }}>Review</label>
           <textarea
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
-            placeholder="Write a remark..."
+            placeholder="Write a review..."
             rows="3"
             style={{
               width: '100%',

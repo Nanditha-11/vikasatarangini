@@ -99,10 +99,11 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
       setView("otp");
     } catch (err) {
@@ -117,10 +118,11 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: otp.join("") }),
+        body: JSON.stringify({ email: normalizedEmail, otp: otp.join("") }),
       });
       setView("reset");
     } catch (err) {
@@ -145,10 +147,11 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, newPassword, otp: otp.join("") }),
+        body: JSON.stringify({ email: normalizedEmail, newPassword, otp: otp.join("") }),
       });
       setView("login");
       alert("Password reset successful! Please login.");

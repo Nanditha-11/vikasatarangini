@@ -55,10 +55,11 @@ export function RegisterPage() {
     setBusy(true);
     setError("");
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/send-register-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
       nextStep();
     } catch (err) {
@@ -74,10 +75,11 @@ export function RegisterPage() {
     setBusy(true);
     setError("");
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email: normalizedEmail, otp }),
       });
       nextStep();
     } catch (err) {
@@ -96,13 +98,14 @@ export function RegisterPage() {
     setError("");
     
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           username: formData.username,
           password: formData.password,
-          email,
+          email: normalizedEmail,
           otp,
           district: selectedDistrict, 
           place: typedPlace,

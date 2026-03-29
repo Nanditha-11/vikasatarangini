@@ -8,7 +8,7 @@ export function Layout({ title, subtitle, children }) {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   const isMaster = user?.role === "master";
-  
+
   const currentPlace = isMaster ? (searchParams.get("place") || "Main") : (user?.place || "Main");
   const brandName = currentPlace === "Main" ? "Vikasa Tarangini" : `${currentPlace.charAt(0).toUpperCase() + currentPlace.slice(1)} Vikasa Tarangini`;
 
@@ -40,9 +40,9 @@ export function Layout({ title, subtitle, children }) {
     <div className="container">
       <div className="topbar">
         <div className="brand" role="banner">
-          <img src="/logo.png" alt="Vikasa Tarangini Logo" className="logo" style={{ 
-            objectFit: 'contain', 
-            background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', 
+          <img src="/logo.png" alt="Vikasa Tarangini Logo" className="logo" style={{
+            objectFit: 'contain',
+            background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
             padding: '4px',
             borderRadius: '12px',
             border: '1px solid #bae6fd',
@@ -71,9 +71,9 @@ export function Layout({ title, subtitle, children }) {
 
         <div className="actions" style={{ gap: '10px', display: 'flex' }}>
           {isMaster && (
-            <button 
-              className="btn" 
-              style={{ ...getBtnStyle("/master-dashboard"), background: 'linear-gradient(135deg, #0d2866, #0072ff)', border: 'none', color: 'white' }} 
+            <button
+              className="btn"
+              style={{ ...getBtnStyle("/master-dashboard"), background: 'linear-gradient(135deg, #0d2866, #0072ff)', border: 'none', color: 'white' }}
               onClick={() => nav("/master-dashboard")}
             >
               Admin List
@@ -95,4 +95,3 @@ export function Layout({ title, subtitle, children }) {
     </div>
   );
 }
-

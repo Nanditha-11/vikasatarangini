@@ -6,6 +6,7 @@ function signAdminToken(admin) {
   return jwt.sign({ 
     role: admin.role || "admin", 
     username: admin.username,
+    id: admin._id,
     district: admin.district,
     place: admin.place,
     whatsappLink: admin.whatsappLink

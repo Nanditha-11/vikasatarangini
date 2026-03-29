@@ -11,6 +11,7 @@ export function AttendanceHistoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("present"); // present | absent | new
   const [paymentFilter, setPaymentFilter] = useState("all"); // all | cash | online | free
+  const [searchTerm, setSearchTerm] = useState("");
   const [historyStudent, setHistoryStudent] = useState(null);
 
   const location = useLocation();
@@ -47,7 +48,7 @@ export function AttendanceHistoryDetailPage() {
     let baseList = activeTab === "present" ? data.present : activeTab === "absent" ? data.absent : data.newStudents;
     if (!baseList) return [];
     
-    // Payment filter for Present tab
+    // 1. Payment filter for Present tab
     if (activeTab === "present") {
       baseList = baseList.filter(s => {
         if (paymentFilter === 'all') return true;
@@ -58,9 +59,20 @@ export function AttendanceHistoryDetailPage() {
       });
     }
 
-    // Always Sort numerically
+    // 2. Search filter
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      baseList = baseList.filter(s => 
+        String(s.slNo || '').toLowerCase().includes(q) ||
+        String(s.name || '').toLowerCase().includes(q) ||
+        String(s.phone || '').toLowerCase().includes(q) ||
+        String(s.fatherName || '').toLowerCase().includes(q)
+      );
+    }
+
+    // 3. Always Sort numerically
     return [...baseList].sort((a, b) => (parseInt(a.slNo, 10) || 0) - (parseInt(b.slNo, 10) || 0));
-  }, [activeTab, paymentFilter, data]);
+  }, [activeTab, paymentFilter, searchTerm, data]);
 
   if (loading) {
     return (
@@ -81,10 +93,33 @@ export function AttendanceHistoryDetailPage() {
   return (
     <Layout title={`Attendance Report: ${date.split('-').reverse().join('-')}`}>
       <div className="card" style={{ padding: '24px' }}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center' }}>
           <button className="btn" onClick={() => nav("/history" + location.search)}>← Back to History</button>
-          <h2 style={{ margin: 0 }}>{date.split('-').reverse().join('-')}</h2>
-          <div style={{ flex: 1, maxWidth: '20px' }} />
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ margin: 0 }}>{date.split('-').reverse().join('-')}</h2>
+          </div>
+          <button
+            className="btn primary"
+            style={{ 
+              background: '#10b981', 
+              borderColor: '#10b981', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              fontWeight: 'bold' 
+            }}
+            onClick={() => {
+              const apiBase = import.meta.env.VITE_API_BASE || "";
+              let url = `${apiBase}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`;
+              if (location.search) {
+                const search = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+                url += `&${search}`;
+              }
+              window.open(url, "_blank");
+            }}
+          >
+            Download Excel
+          </button>
         </div>
 
         <div className="row" style={{ gap: '15px', marginBottom: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -143,6 +178,42 @@ export function AttendanceHistoryDetailPage() {
           </div>
         )}
 
+        <div className="row" style={{ marginBottom: '20px', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '600px' }}>
+            <input
+              className="input"
+              style={{ 
+                padding: '12px 40px 12px 15px', 
+                borderRadius: '50px', 
+                fontSize: '1em',
+                width: '100%',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              placeholder={`Search in ${activeTab} students...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm("")}
+                style={{
+                  position: 'absolute',
+                  right: '15px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.2em',
+                  cursor: 'pointer',
+                  color: '#94a3b8'
+                }}
+              >
+                &times;
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="tableWrap">
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
@@ -157,7 +228,7 @@ export function AttendanceHistoryDetailPage() {
                     <th style={{ width: '11%', textAlign: 'center', padding: '12px 5px' }}>Method</th>
                     <th style={{ width: '9%', textAlign: 'center', padding: '12px 5px' }}>Qty</th>
                     <th style={{ width: '10%', textAlign: 'center', padding: '12px 5px' }}>Amount</th>
-                    <th style={{ width: '16%', textAlign: 'center', padding: '12px 5px' }}>Remarks</th>
+                    <th style={{ width: '16%', textAlign: 'center', padding: '12px 5px' }}>Review</th>
                   </>
                 ) : activeTab === 'new' ? (
                   <th style={{ width: '16.6%', textAlign: 'center', padding: '12px 5px' }}>Status</th>
