@@ -48,7 +48,7 @@ authRouter.post("/send-register-otp", async (req, res) => {
     res.json({ ok: true, message: "OTP sent to your email" });
   } catch (err) {
     console.error("Mail error:", err);
-    res.status(500).json({ error: "Failed to send email" });
+    res.status(500).json({ error: "Email failed: " + (err.code || err.message) });
   }
 });
 
