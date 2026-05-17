@@ -371,7 +371,7 @@ export function AttendancePage() {
                     }} 
                     onClick={() => window.open('/qrcodes', '_blank')}
                   >
-                    🖨️ Print QR Codes
+                    🖨️ QR Codes
                   </button>
                 </>
               );

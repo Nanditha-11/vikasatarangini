@@ -181,7 +181,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
 
-        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
+        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n${qrUrl}`;
 
         setSuccessData({ phone: num, text: inviteMsg, qrUrl, studentName: res.student.name });
       }
