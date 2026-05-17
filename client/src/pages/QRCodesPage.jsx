@@ -43,10 +43,29 @@ export function QRCodesPage() {
 
   return (
     <Layout title="All Student QR Codes">
+      <style>
+        {`
+          @media print {
+            .no-print, nav, header, .sidebar, .btn {
+              display: none !important;
+            }
+            .card {
+              box-shadow: none !important;
+              border: none !important;
+              background: white !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            body {
+              background: white !important;
+            }
+          }
+        `}
+      </style>
       <div className="card" style={{ marginTop: '24px', padding: '30px' }}>
-        <h2 style={{ color: '#0d2866', marginBottom: '20px' }}>Print / View Student QR Codes</h2>
+        <h2 className="no-print" style={{ color: '#0d2866', marginBottom: '20px' }}>Print / View Student QR Codes</h2>
         
-        <div className="row" style={{ marginBottom: '24px', position: 'relative' }}>
+        <div className="row no-print" style={{ marginBottom: '24px', position: 'relative', display: 'flex', gap: '15px' }}>
           <input
             className="input"
             value={filter}
@@ -79,6 +98,13 @@ export function QRCodesPage() {
               &times;
             </button>
           )}
+          <button 
+            className="btn primary no-print" 
+            onClick={() => window.print()}
+            style={{ padding: '14px 24px', fontSize: '1.1em', background: '#0d2866', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            🖨️ Print Codes
+          </button>
         </div>
 
         {error && <div className="error">{error}</div>}

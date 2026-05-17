@@ -175,14 +175,14 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
         const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
 
-        // The QR code link MUST be the very first link in the message, otherwise WhatsApp will preview the group link instead!
-        let inviteMsg = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, ${res.student.name}.\n\n📷 *Your Attendance QR Code:*\n${qrUrl}\n\nPlease save or screenshot the image above. Show it when you arrive for faster attendance!`;
+        const activeLink = (link && link.startsWith("http")) ? link : "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
+        
+        let inviteMsg = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, ${res.student.name}. Please join our official WhatsApp group by clicking the link below:\n\n${activeLink}\n\n`;
 
-        if (link && link.startsWith("http")) {
-          inviteMsg += `\n\n📱 *Join our WhatsApp Group:*\n${link}`;
-        }
+        inviteMsg += `📷 Your Attendance QR Code:\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n\n${qrUrl}`;
 
-        setSuccessData({ phone: num, text: inviteMsg, qrUrl, studentName: res.student.name });
+        window.open(`https://wa.me/${num}?text=${encodeURIComponent(inviteMsg)}`, "_blank");
+        setShowAddManual(false);
       }
 
       setNewStudent({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
@@ -352,49 +352,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         </div>
       )}
 
-      {successData && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }}>
-          <div className="card" style={{ maxWidth: '400px', textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '4em', marginBottom: '10px' }}>✅</div>
-            <h3 style={{ margin: '0 0 10px' }}>Student Added!</h3>
-            <p className="muted" style={{ marginBottom: '25px' }}>
-              The student has been added successfully. Click below to send them the WhatsApp group invitation.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <a
-                className="btn primary"
-                style={{
-                  background: '#25D366',
-                  borderColor: '#25D366',
-                  fontWeight: 'bold',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                href={`https://wa.me/${successData.phone}?text=${encodeURIComponent(successData.text)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  setSuccessData(null);
-                  setShowAddManual(false);
-                }}
-              >
-                📲 Send WhatsApp Invite
-              </a>
-              <button
-                className="btn"
-                onClick={() => {
-                  setSuccessData(null);
-                  setShowAddManual(false);
-                }}
-              >
-                Not Now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
