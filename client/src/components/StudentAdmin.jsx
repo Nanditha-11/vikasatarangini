@@ -181,7 +181,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
 
-        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!`;
+        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n${qrUrl}`;
 
         setSuccessData({ phone: num, text: inviteMsg, qrUrl, studentName: res.student.name });
       }
@@ -362,44 +362,27 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               The student has been added successfully. Click below to send them the WhatsApp group invitation.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
+              <a
                 className="btn primary"
                 style={{
                   background: '#25D366',
                   borderColor: '#25D366',
                   fontWeight: 'bold',
+                  textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  cursor: 'pointer'
+                  justifyContent: 'center'
                 }}
-                onClick={async () => {
-                  try {
-                    const response = await fetch(successData.qrUrl);
-                    const blob = await response.blob();
-                    const fileName = `${successData.studentName.replace(/\s+/g, '_')}_QR.png`;
-                    const file = new File([blob], fileName, { type: blob.type });
-
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                      await navigator.share({
-                        title: 'Attendance QR Code',
-                        text: successData.text,
-                        files: [file]
-                      });
-                    } else {
-                      window.open(`https://wa.me/${successData.phone}?text=${encodeURIComponent(successData.text + '\n' + successData.qrUrl)}`, "_blank");
-                    }
-                  } catch (e) {
-                    console.error("Native share failed", e);
-                    window.open(`https://wa.me/${successData.phone}?text=${encodeURIComponent(successData.text + '\n' + successData.qrUrl)}`, "_blank");
-                  }
+                href={`https://wa.me/${successData.phone}?text=${encodeURIComponent(successData.text)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
                   setSuccessData(null);
                   setShowAddManual(false);
                 }}
               >
                 📲 Send WhatsApp Invite
-              </button>
+              </a>
               <button
                 className="btn"
                 onClick={() => {
