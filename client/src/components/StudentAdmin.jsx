@@ -179,7 +179,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         let inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
 
         const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}&ext=.png`;
 
         inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n${qrUrl}`;
 
