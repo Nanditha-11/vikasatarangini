@@ -168,20 +168,19 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
           ? config.whatsappLink
           : (adminProfile?.whatsappLink || user?.whatsappLink || "");
 
-      let num = res.student?.phone?.replace(/\D/g, "");
+        let num = res.student?.phone?.replace(/\D/g, "");
       if (num) {
         if (num.length === 10) num = "91" + num;
-        let template = config?.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`;
-        if (!link || !link.startsWith("http")) {
-          // Send a simplified message if no group link is available
-          template = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}.`;
-        }
-        let inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
-
+        
         const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}&ext=.png`;
+        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
 
-        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n${qrUrl}`;
+        // The QR code link MUST be the very first link in the message, otherwise WhatsApp will preview the group link instead!
+        let inviteMsg = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, ${res.student.name}.\n\n📷 *Your Attendance QR Code:*\n${qrUrl}\n\nPlease save or screenshot the image above. Show it when you arrive for faster attendance!`;
+
+        if (link && link.startsWith("http")) {
+          inviteMsg += `\n\n📱 *Join our WhatsApp Group:*\n${link}`;
+        }
 
         setSuccessData({ phone: num, text: inviteMsg, qrUrl, studentName: res.student.name });
       }
