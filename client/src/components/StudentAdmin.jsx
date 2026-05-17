@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
+import { Scanner } from '@yudiel/react-qr-scanner';
 
-export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], viewDistrict, viewPlace, whatsappLink }) {
+export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], viewDistrict, viewPlace, whatsappLink, onMarkStudent }) {
   const [showAddManual, setShowAddManual] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [newStudent, setNewStudent] = useState({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
   const [fieldErrors, setFieldErrors] = useState({});
   const [successData, setSuccessData] = useState(null);
@@ -35,7 +37,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       })
       .catch(err => console.error("[StudentAdmin] Failed to load admin profile:", err));
   }, [viewDistrict, viewPlace]);
-  
+
   useEffect(() => {
     if (newStudent.phone?.length === 10) {
       apiFetch(`/api/students/inquiry/${newStudent.phone}`)
@@ -52,21 +54,85 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
     }
   }, [newStudent.phone]);
 
-  const handleInquiry = async () => {
-    if (!inquiryPhone || inquiryPhone.length !== 10) {
+  const handleImportOnly = async (studentData) => {
+    setBusy(true);
+    try {
+      const res = await apiFetch("/api/students/import-only", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentData),
+      });
+      
+      // Update list before opening modal
+      if (onRefresh) await onRefresh();
+      
+      setShowAddManual(false);
+      setNewStudent({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
+      
+      // Now open the marking modal for this new local student record
+      if (onMarkStudent) onMarkStudent(res.student);
+    } catch (err) {
+      alert(err.message || "Failed to import student");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleInquiry = async (phoneOverride) => {
+    const phoneToSearch = typeof phoneOverride === 'string' ? phoneOverride : inquiryPhone;
+    if (!phoneToSearch || phoneToSearch.length !== 10) {
       alert("Please enter a valid 10-digit phone number");
       return;
     }
     setBusy(true);
     setInquiryResults(null);
     try {
-      const data = await apiFetch(`/api/students/inquiry/${inquiryPhone}`);
+      const data = await apiFetch(`/api/students/inquiry/${phoneToSearch}`);
       setInquiryResults(data.results || []);
       setShowInquiryModal(true);
     } catch (err) {
       setError(err.message || "Global Inquiry failed");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleQRScan = (detectedCodes) => {
+    if (!detectedCodes || detectedCodes.length === 0) return;
+    const value = detectedCodes[0].rawValue?.trim();
+    if (!value) return;
+
+    let searchVal = value;
+    try {
+      const obj = JSON.parse(value);
+      if (obj.phone) searchVal = obj.phone;
+      else if (obj.slNo) searchVal = String(obj.slNo);
+    } catch {
+      // Treat as raw string
+    }
+
+    const numOnly = searchVal.replace(/\D/g, '');
+    const cleanSearchVal = searchVal.toLowerCase().trim();
+
+    const localStudent = rows.find(r => {
+      const slNoMatch = String(r.slNo) === searchVal || String(r.slNo) === numOnly;
+      const phoneMatch = r.phone === searchVal || (numOnly.length >= 10 && r.phone?.includes(numOnly.slice(-10)));
+      const nameMatch = r.name?.toLowerCase() === cleanSearchVal;
+      return slNoMatch || phoneMatch || nameMatch;
+    });
+
+    if (localStudent) {
+      if (onMarkStudent) onMarkStudent(localStudent);
+      setShowScanner(false);
+    } else {
+      if (numOnly.length >= 10) {
+        setInquiryPhone(numOnly.slice(-10));
+        handleInquiry(numOnly.slice(-10));
+        setShowScanner(false);
+      } else {
+        setError(`Student not found! The scanned QR code contained: "${value}".`);
+        setShowScanner(false);
+      }
     }
   };
 
@@ -110,9 +176,14 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
           // Send a simplified message if no group link is available
           template = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}.`;
         }
-        const inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
+        let inviteMsg = template.replace("{{name}}", res.student.name).replace("{{link}}", link);
 
-        setSuccessData({ phone: num, text: inviteMsg });
+        const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
+
+        inviteMsg += `\n\n📷 *Your Attendance QR Code:*\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
+
+        setSuccessData({ phone: num, text: inviteMsg, qrUrl, studentName: res.student.name });
       }
 
       setNewStudent({ slNo: "", name: "", fatherName: "", age: "", phone: "" });
@@ -130,21 +201,34 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
         <h3 style={{ margin: 0 }}>Student Management</h3>
         <div className="row" style={{ gap: '10px' }}>
           <div className="row" style={{ gap: '10px', background: 'rgba(255,255,255,0.7)', padding: '5px 15px', borderRadius: '50px', border: '1px solid #e2e8f0' }}>
-            <input 
-              type="text" 
-              placeholder="🔍 Search all locations by phone..." 
+            <input
+              type="text"
+              placeholder="🔍 Search all locations by phone..."
               value={inquiryPhone}
               onChange={(e) => setInquiryPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
               onKeyDown={(e) => e.key === 'Enter' && handleInquiry()}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.9em', color: '#000000', fontWeight: 'bold' }}
             />
-            <button className="btn" onClick={handleInquiry} disabled={busy} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0' }}>Search</button>
+            <button className="btn" onClick={() => handleInquiry()} disabled={busy} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0' }}>Search</button>
           </div>
+          <button className="btn primary" style={{ background: '#f59e0b', borderColor: '#f59e0b', color: '#000000' }} onClick={() => setShowScanner(!showScanner)}>
+            {showScanner ? "✕ Close Scanner" : "📷 Scan QR"}
+          </button>
           <button className="btn primary" style={{ background: '#3b82f6', borderColor: '#3b82f6', color: '#000000' }} onClick={() => setShowAddManual(!showAddManual)}>
             {showAddManual ? "✕ Close" : "👤 Add New Student"}
           </button>
         </div>
       </div>
+
+      {showScanner && (
+        <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.6)', borderRadius: '12px', textAlign: 'center' }}>
+          <h4 style={{ margin: '0 0 10px 0' }}>Scan Student QR Code</h4>
+          <div style={{ maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden' }}>
+            <Scanner onScan={handleQRScan} />
+          </div>
+          <p className="muted" style={{ marginTop: '10px' }}>Scanning will automatically try to find and mark the student.</p>
+        </div>
+      )}
 
       {showAddManual && (
         <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.6)', borderRadius: '12px' }}>
@@ -155,21 +239,54 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
             })()}
           </div>
           {autoInquiryResults && (
-            <div style={{ marginBottom: '15px', padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af' }}>
-              <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🔍 Global Match Found
+            <div style={{ marginBottom: '15px', padding: '15px', background: '#eff6ff', border: '2px solid #3b82f6', borderRadius: '12px', color: '#1e40af' }}>
+              <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '1.1em' }}>
+                🔍 EXISTING STUDENT FOUND GLOBALLY!
               </div>
-              <div style={{ fontSize: '0.85em', marginTop: '4px' }}>
-                This student is registered in: <strong>{autoInquiryResults.map(r => r.place).join(", ")}</strong>.
-                <button 
-                  onClick={() => {
-                    setInquiryResults(autoInquiryResults);
-                    setShowInquiryModal(true);
-                  }}
-                  style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}
-                >
-                  View Full History
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {autoInquiryResults.map((r, i) => (
+                  <div key={i} style={{ padding: '15px', background: 'white', borderRadius: '12px', border: '1px solid #bfdbfe', color: '#000000', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: '900', fontSize: '1.2em', color: '#0d2866' }}>{r.studentName}</div>
+                      <div style={{ background: '#0d2866', color: 'white', padding: '2px 10px', borderRadius: '50px', fontSize: '0.75em', fontWeight: 'bold' }}>ID: #{r.slNo}</div>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9em', color: '#444' }}>
+                      <div><strong>Father:</strong> {r.fatherName || 'N/A'}</div>
+                      <div><strong>Age:</strong> {r.age || 'N/A'} yrs</div>
+                      <div style={{ gridColumn: 'span 2' }}><strong>Main Location:</strong> 📍 {r.place} ({r.district})</div>
+                    </div>
+
+                    <div style={{ marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                      {(() => {
+                        // Accessing it correctly: r is the mapped result item
+                        const isMatch = rows.find(row => 
+                          row.phone === newStudent.phone && 
+                          row.name.toLowerCase() === r.studentName.toLowerCase()
+                        );
+
+                        if (isMatch?.present) {
+                          return <div style={{ background: '#dcfce7', color: '#166534', padding: '8px 15px', borderRadius: '6px', fontSize: '0.85em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                             ✅ {r.studentName} is Present!
+                          </div>;
+                        }
+                        return <button 
+                          onClick={() => handleImportOnly({
+                            name: r.studentName,
+                            fatherName: r.fatherName,
+                            age: r.age,
+                            phone: newStudent.phone,
+                            originPlace: r.place,
+                            originDistrict: r.district
+                          })}
+                          style={{ background: '#0d2866', border: 'none', color: 'white', borderRadius: '6px', padding: '8px 15px', fontSize: '0.85em', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          📝 Mark {r.studentName} Attendance
+                        </button>;
+                      })()}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -275,59 +392,6 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
               >
                 Not Now
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInquiryModal && (
-        <div className="modal-overlay" style={{ zIndex: 1200 }}>
-          <div className="card" style={{ maxWidth: '600px', width: '90%', padding: '0', overflow: 'hidden' }}>
-            <div style={{ background: '#0d2866', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Global Inquiry Result</h3>
-              <button onClick={() => setShowInquiryModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '1.2em', cursor: 'pointer' }}>✕</button>
-            </div>
-            <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-              {inquiryResults?.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                  <div style={{ fontSize: '3em' }}>🕵️</div>
-                  <h3>No Record Found</h3>
-                  <p className="muted">This phone number has not been registered in any location yet.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {inquiryResults.map((res, i) => (
-                    <div key={i} className="card" style={{ border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#0d2866', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>📍 {res.place} ({res.district})</span>
-                        <span style={{ color: '#000000', fontSize: '0.8em' }}>ID: {res.slNo}</span>
-                      </div>
-                      <div style={{ fontSize: '0.9em', marginBottom: '15px', color: '#475569' }}>
-                        Student Name: <strong style={{color:'#000000'}}>{res.studentName}</strong>
-                      </div>
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-                        <div style={{ fontSize: '0.85em', fontWeight: 'bold', marginBottom: '8px' }}>Medicine History:</div>
-                        {res.history?.length === 0 ? (
-                          <div style={{ fontSize: '0.85em', color: '#64748b', fontStyle: 'italic' }}>No medicine intake recorded here.</div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            {res.history.map((h, j) => (
-                              <div key={j} style={{ fontSize: '0.8em', display: 'flex', justifyContent: 'space-between', background: '#ffffff', padding: '5px 8px', borderRadius: '4px' }}>
-                                <span>📅 {h.date}</span>
-                                <span>💊 {h.quantity} qty</span>
-                                <span style={{ color: '#0d2866', fontWeight: 'bold' }}>{h.paymentMethod}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ padding: '15px 20px', background: '#f1f5f9', textAlign: 'center' }}>
-              <button className="btn primary" onClick={() => setShowInquiryModal(false)} style={{width:'100%'}}>Done</button>
             </div>
           </div>
         </div>

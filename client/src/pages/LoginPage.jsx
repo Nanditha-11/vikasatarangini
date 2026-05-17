@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiFetch, setToken } from "../lib/api";
+import { StudentHistoryLog } from "../components/StudentHistoryLog";
+
 
 export function LoginPage() {
   const nav = useNavigate();
@@ -32,6 +34,9 @@ export function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lookupResults, setLookupResults] = useState(null);
+  const [selectedHistory, setSelectedHistory] = useState(null);
+
 
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
@@ -85,7 +90,16 @@ export function LoginPage() {
       });
       setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      nav("/", { replace: true });
+      
+      const redirectUrl = localStorage.getItem("vt_redirect");
+      if (redirectUrl) {
+        localStorage.removeItem("vt_redirect");
+        window.location.href = redirectUrl;
+      } else if (data.user.role === "master") {
+        window.location.href = "/master-dashboard";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -342,6 +356,8 @@ export function LoginPage() {
     );
   }
 
+
+
   return (
     <div className="login-page-wrapper">
       <img src="/image1.jpg" alt="Left side" className="login-side-image" />
@@ -488,6 +504,27 @@ export function LoginPage() {
               <p style={{ margin: 0, fontSize: '1.1em', textAlign: 'center' }}>
                 Need an account? <Link to="/register" style={{ color: '#0d2866', fontWeight: 'bold' }}>Register Here</Link>
               </p>
+              <div style={{ marginTop: 15, width: '100%', textAlign: 'center' }}>
+                <span style={{ color: '#64748b', fontSize: '0.9em' }}>— OR —</span>
+              </div>
+              <button 
+                type="button" 
+                className="btn" 
+                onClick={() => nav("/student-history")}
+                style={{ 
+                  marginTop: 15, 
+                  background: 'none', 
+                  border: '2px solid #0d2866', 
+                  color: '#0d2866', 
+                  width: '100%', 
+                  padding: '12px', 
+                  fontWeight: 'bold',
+                  borderRadius: '12px'
+                }}
+              >
+                View Your Tablet History
+              </button>
+
             </div>
           </form>
         </div>

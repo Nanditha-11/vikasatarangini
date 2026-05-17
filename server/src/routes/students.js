@@ -25,17 +25,23 @@ studentsRouter.get("/inquiry/:phone", requireAuth, async (req, res) => {
     const results = [];
 
     // 3. Search each tenant DB
-    // Note: This could be optimized later with a global index, but works for the current scale
     for (const admin of admins) {
       if (!admin.username) continue;
       
       try {
         const tenantDb = getTenantDb(admin.username);
         const { Student, Attendance } = getTenantModels(tenantDb);
-        const student = await Student.findOne({ phone: normalizedPhone }).lean();
+        // Find ALL students with this phone (e.g. siblings)
+        const matchingStudents = await Student.find({ phone: normalizedPhone }).lean();
         
-        if (student) {
-          // Found student in this location! Now get their history
+        for (const student of matchingStudents) {
+          // Check if we already found this exact student (same name and phone) to avoid showing them multiple times
+          const duplicate = results.find(r => 
+            r.studentName.toLowerCase() === student.name.toLowerCase() && 
+            String(r.phone) === String(student.phone)
+          );
+          if (duplicate) continue;
+
           const history = await Attendance.find({ 
             slNo: student.slNo, 
             type: 'student' 
@@ -46,6 +52,9 @@ studentsRouter.get("/inquiry/:phone", requireAuth, async (req, res) => {
             place: admin.place,
             studentName: student.name,
             slNo: student.slNo,
+            fatherName: student.fatherName,
+            age: student.age,
+            phone: student.phone, // Include phone in result for duplicate check
             history: history.map(h => ({
               date: h.date,
               quantity: h.quantity,
@@ -55,13 +64,107 @@ studentsRouter.get("/inquiry/:phone", requireAuth, async (req, res) => {
           });
         }
       } catch (e) {
-        console.error(`[GlobalInquiry] Error searching tenant ${admin.username}:`, e);
+        console.error(e);
       }
     }
 
     res.json({ results });
   } catch (err) {
     console.error("[GlobalInquiry Error]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// QUICK IMPORT ONLY - Register visiting student without marking yet
+studentsRouter.post("/import-only", requireAuth, tenantMiddleware, async (req, res) => {
+  try {
+    const Student = req.tenantModels.Student;
+    const { name, fatherName, age, phone, originPlace, originDistrict } = req.body;
+    const { district, place } = req.user;
+
+    const nextSlNo = await getNextSlNo(req);
+
+    const student = await Student.findOneAndUpdate(
+      { phone: String(phone).trim() },
+      {
+        $set: {
+          slNo: nextSlNo,
+          name: name,
+          fatherName: fatherName,
+          age: age,
+          phone: String(phone).trim(),
+          district,
+          place,
+          isVisiting: true,
+          originPlace: originPlace || "",
+          originDistrict: originDistrict || ""
+        }
+      },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true, student });
+  } catch (err) {
+    console.error("[ImportOnly Error]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// QUICK IMPORT AND MARK - For visiting students
+studentsRouter.post("/import-and-mark", requireAuth, tenantMiddleware, async (req, res) => {
+  try {
+    const Student = req.tenantModels.Student;
+    const Attendance = req.tenantModels.Attendance;
+    const { name, fatherName, age, phone } = req.body;
+    const { district, place } = req.user;
+
+    // 1. Get next serial no
+    const nextSlNo = await getNextSlNo(req);
+
+    // 2. Create local student
+    const student = await Student.findOneAndUpdate(
+      { phone: String(phone).trim() }, // Check if already exist by phone
+      {
+        $set: {
+          slNo: nextSlNo,
+          name: name,
+          fatherName: fatherName,
+          age: age,
+          phone: String(phone).trim(),
+          district,
+          place
+        }
+      },
+      { new: true, upsert: true }
+    );
+
+    // 3. Mark present for today
+    const now = new Date();
+    const today = [
+      String(now.getDate()).padStart(2, '0'),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      now.getFullYear()
+    ].join('-'); // DD-MM-YYYY
+
+    await Attendance.findOneAndUpdate(
+      { slNo: student.slNo, date: today, type: 'student' },
+      {
+        $set: {
+          present: true,
+          quantity: 1,
+          paymentMethod: 'Cash',
+          studentName: student.name,
+          phone: student.phone,
+          district,
+          place
+        }
+      },
+      { upsert: true }
+    );
+
+    res.json({ success: true, student });
+  } catch (err) {
+    console.error("[ImportAndMark Error]", err);
     res.status(500).json({ error: err.message });
   }
 });

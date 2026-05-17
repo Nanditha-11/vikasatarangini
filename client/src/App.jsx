@@ -9,13 +9,22 @@ import { AttendanceHistoryDetailPage } from "./pages/AttendanceHistoryDetailPage
 import { PaymentPage } from "./pages/PaymentPage";
 import { ModifyStudentsPage } from "./pages/ModifyStudentsPage";
 import { AboutPage } from "./pages/AboutPage";
+import { PublicStudentHistoryPage } from "./pages/PublicStudentHistoryPage";
+import { QRCodesPage } from "./pages/QRCodesPage";
+import { ScanPage } from "./pages/ScanPage";
 
 function RequireAuth({ children, adminOnly = false }) {
   const token = localStorage.getItem("vt_token");
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) {
+    const fullUrl = window.location.pathname + window.location.search;
+    if (fullUrl !== "/" && fullUrl !== "/login") {
+      localStorage.setItem("vt_redirect", fullUrl);
+    }
+    return <Navigate to="/login" replace />;
+  }
   
   // Master Admins are allowed to access these pages in Audit Mode
   if (user?.role === "master") {
@@ -113,8 +122,26 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route
+        path="/qrcodes"
+        element={
+          <RequireAuth adminOnly={true}>
+            <QRCodesPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/scan"
+        element={
+          <RequireAuth adminOnly={true}>
+            <ScanPage />
+          </RequireAuth>
+        }
+      />
       <Route path="/pay" element={<PaymentPage />} />
+      <Route path="/student-history" element={<PublicStudentHistoryPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
   );
 }

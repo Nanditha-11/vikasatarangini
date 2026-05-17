@@ -10,6 +10,8 @@ const { studentsRouter } = require("./routes/students");
 const { attendanceRouter } = require("./routes/attendance");
 const { adminManagementRouter } = require("./routes/adminManagement");
 const { locationConfigRouter } = require("./routes/locationConfig");
+const { publicRouter } = require("./routes/public");
+
 const Admin = require("./models/Admin");
 
 dotenv.config();
@@ -43,6 +45,12 @@ app.use("/api/students", studentsRouter);
 app.use("/api/attendance", attendanceRouter);
 app.use("/api/admins", adminManagementRouter);
 app.use("/api/location-config", locationConfigRouter);
+app.use("/api/public", publicRouter);
+
+app.get("/api/public/network-ip", (req, res) => {
+  res.json({ ip: getLocalIp(), port: process.env.PORT || 5000 });
+});
+
 
 // Serve static files from the React app
 const clientPath = path.join(__dirname, "../../client/dist");

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
 
-export function StudentHistoryLog({ student, onClose }) {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+export function StudentHistoryLog({ student, onClose, publicHistory }) {
+  const [history, setHistory] = useState(publicHistory || []);
+  const [loading, setLoading] = useState(!publicHistory);
 
   useEffect(() => {
+    if (publicHistory) return;
     async function fetchHistory() {
       try {
         const data = await apiFetch(`/api/attendance/student/${student.slNo}`);
@@ -17,7 +18,7 @@ export function StudentHistoryLog({ student, onClose }) {
       }
     }
     fetchHistory();
-  }, [student.slNo]);
+  }, [student.slNo, publicHistory]);
 
   const totalMeds = history.reduce((acc, curr) => acc + (curr.quantity || 0), 0);
   const totalPresent = history.filter(h => h.present).length;
@@ -68,11 +69,27 @@ export function StudentHistoryLog({ student, onClose }) {
               {history.map((h, i) => (
                 <div key={i} className={`timeline-item ${h.present ? 'present' : 'absent'}`}>
                   <div className="date">
-                    {new Date(h.date).toLocaleDateString("en-GB", { 
-                      day: '2-digit', 
-                      month: 'short', 
-                      year: 'numeric' 
-                    })}
+                    {(() => {
+                      if (!h.date) return "N/A";
+                      try {
+                        // Handle YYYY-MM-DD format directly to avoid timezone issues
+                        if (typeof h.date === 'string' && h.date.includes('-')) {
+                          const [y, m, d] = h.date.split('-');
+                          if (y && m && d) {
+                            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                            return `${d} ${months[parseInt(m) - 1]} ${y}`;
+                          }
+                        }
+                        const dt = new Date(h.date);
+                        return isNaN(dt.getTime()) ? h.date : dt.toLocaleDateString("en-GB", { 
+                          day: '2-digit', 
+                          month: 'short', 
+                          year: 'numeric' 
+                        });
+                      } catch (e) {
+                        return h.date || "Invalid Date";
+                      }
+                    })()}
                   </div>
                   <div className="status">{h.present ? 'Present' : 'Absent'}</div>
                   <div className="details">

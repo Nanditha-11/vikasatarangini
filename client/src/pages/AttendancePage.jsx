@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAttendance } from "../hooks/useAttendance";
@@ -28,7 +28,8 @@ export function AttendancePage() {
 
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const isMaster = user?.role === "master";
 
   const [viewDistrict, setViewDistrict] = useState(() => {
@@ -70,6 +71,49 @@ export function AttendancePage() {
   const [historyStudent, setHistoryStudent] = useState(null);
   const [markingStudent, setMarkingStudent] = useState(null);
   const [modifyingStudent, setModifyingStudent] = useState(null);
+  const [inquiryResults, setInquiryResults] = useState(null);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+
+  const handleGlobalInquiry = async (phone) => {
+    const p = phone?.replace(/\D/g, "");
+    if (!p || p.length !== 10) {
+      alert("Please enter a valid 10-digit phone number");
+      return;
+    }
+    setBusy(true);
+    setInquiryResults(null);
+    try {
+      const data = await apiFetch(`/api/students/inquiry/${p}`);
+      setInquiryResults(data.results || []);
+      setShowInquiryModal(true);
+    } catch (err) {
+      setError(err.message || "Global Inquiry failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Handle 'mark' parameter from scanner
+  useEffect(() => {
+    const markId = searchParams.get("mark");
+    if (markId && rows.length > 0) {
+      const student = rows.find(r => String(r.slNo) === markId);
+      if (student) {
+        if (isMaster) {
+          alert(`QR Scanned: ${student.name} (ID: ${student.slNo}). \nNote: Master Admins are in read-only Audit Mode and cannot mark attendance.`);
+        } else {
+          setMarkingStudent(student);
+        }
+        // Clear the URL parameter so it doesn't re-trigger on refresh
+        searchParams.delete("mark");
+        setSearchParams(searchParams, { replace: true });
+      } else if (!busy) {
+        alert(`Student ID ${markId} not found in this branch.`);
+        searchParams.delete("mark");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, rows, busy, setSearchParams, isMaster]);
 
   useEffect(() => {
     if (isMaster && viewDistrict) {
@@ -122,7 +166,7 @@ export function AttendancePage() {
       const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
 
       console.log(`[Auto-WhatsApp] Sending to ${fullPhone}: ${baseMsg}`);
-      
+
       if (fullPhone && fullPhone.length >= 10) {
         window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
       } else {
@@ -180,7 +224,7 @@ export function AttendancePage() {
       const text = encodeURIComponent(baseMsg);
       const phone = sPhone.replace(/\D/g, '');
       const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
-      
+
       if (fullPhone && fullPhone.length >= 10) {
         window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
       }
@@ -245,15 +289,26 @@ export function AttendancePage() {
 
       <div className="grid dashboard-grid" style={{ gap: '24px' }}>
         <div>
-          <StudentAdmin 
-            onRefresh={() => load(date, viewDistrict, viewPlace)} 
-            busy={busy} 
-            setBusy={setBusy} 
-            setError={setError} 
-            rows={rows} 
+          <StudentAdmin
+            onRefresh={async () => await load(date, viewDistrict, viewPlace)}
+            busy={busy}
+            setBusy={setBusy}
+            setError={setError}
+            rows={rows}
             viewDistrict={viewDistrict}
             viewPlace={viewPlace}
             whatsappLink={whatsappLink}
+            message={message}
+            onMarkStudent={(s) => {
+              // Add to rows locally so marking works instantly
+              setRows(prev => {
+                const exists = prev.find(r => r.slNo === s.slNo);
+                if (exists) return prev;
+                return [...prev, s];
+              });
+              setMarkingStudent(s);
+            }}
+            onGlobalInquiry={handleGlobalInquiry}
           />
           <div className="row" style={{ marginBottom: '16px', gap: '10px' }}>
             {(() => {
@@ -286,6 +341,38 @@ export function AttendancePage() {
                   <button style={getModeStyle('crosscheck')} onClick={() => setViewMode('crosscheck')}>Cross Check</button>
                   <button style={getModeStyle('summary')} onClick={() => setViewMode('summary')}>Summary View</button>
                   <button style={getModeStyle('payments')} onClick={() => setViewMode('payments')}>Total Amount</button>
+                  <button 
+                    style={{
+                      background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      boxShadow: '0 2px 6px rgba(29, 78, 216, 0.2)',
+                      borderRadius: '50px',
+                      cursor: 'pointer'
+                    }} 
+                    onClick={() => {
+                      const navigate = (window.location.href = '/scan');
+                    }}
+                  >
+                    📷 Scanner
+                  </button>
+                  <button 
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)',
+                      borderRadius: '50px',
+                      cursor: 'pointer'
+                    }} 
+                    onClick={() => window.open('/qrcodes', '_blank')}
+                  >
+                    🖨️ Print QR Codes
+                  </button>
                 </>
               );
             })()}
@@ -327,16 +414,16 @@ export function AttendancePage() {
           ) : viewMode === 'summary' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="row" style={{ justifyContent: 'flex-end', gap: '10px' }}>
-  <button
-    className="btn primary"
-    style={{ background: '#10b981', borderColor: '#10b981' }}
-    onClick={() => {
-      const apiBase = import.meta.env.VITE_API_BASE || "";
-      window.open(`${apiBase}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
-    }}
-  >
-    📥 Download Attendance Excel
-  </button>
+                <button
+                  className="btn primary"
+                  style={{ background: '#10b981', borderColor: '#10b981' }}
+                  onClick={() => {
+                    const apiBase = import.meta.env.VITE_API_BASE || "";
+                    window.open(`${apiBase}/api/attendance/${date}/download?token=${localStorage.getItem("vt_token")}&t=${Date.now()}`, "_blank");
+                  }}
+                >
+                  📥 Download Attendance Excel
+                </button>
               </div>
 
               <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
@@ -387,9 +474,12 @@ export function AttendancePage() {
               onModifyClick={setModifyingStudent}
               onUpdateQuantity={updateQuantity}
               onViewHistory={setHistoryStudent}
+              onGlobalSearch={handleGlobalInquiry}
               busy={busy}
               viewMode={viewMode}
               isMaster={isMaster}
+              viewDistrict={viewDistrict}
+              viewPlace={viewPlace}
             />
           )}
         </div>
@@ -431,6 +521,74 @@ export function AttendancePage() {
           onClose={() => setModifyingStudent(null)}
           onConfirm={handleConfirmModify}
         />
+      )}
+
+      {showInquiryModal && (
+        <div className="modal-overlay" style={{ zIndex: 2000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: '700px', width: '95%', padding: '0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: 'none' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0d2866, #1e40af)', color: 'white', padding: '25px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.4em' }}>🔍 Global Student Record</h2>
+                <div style={{ fontSize: '0.85em', opacity: 0.8, marginTop: '4px' }}>Found matching records in other locations</div>
+              </div>
+              <button onClick={() => setShowInquiryModal(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '36px', height: '36px', borderRadius: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+
+            <div style={{ padding: '30px', maxHeight: '75vh', overflowY: 'auto', background: '#f8fafc' }}>
+              {inquiryResults?.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <div style={{ fontSize: '4em', marginBottom: '15px' }}>🕵️</div>
+                  <h3 style={{ color: '#0d2866' }}>No Global Record Found</h3>
+                  <p className="muted">This student has not been registered in any other branch yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                  {inquiryResults.map((res, i) => (
+                    <div key={i} className="card" style={{ padding: '20px', border: '1px solid #e2e8f0', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderRadius: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '15px' }}>
+                        <div>
+                          <div style={{ fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>Location</div>
+                          <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#0d2866' }}>📍 {res.place}, {res.district}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>Registered ID</div>
+                          <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#000' }}>#{res.slNo}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>Full Name</div>
+                        <div style={{ fontSize: '1.3em', fontWeight: '800', color: '#000' }}>{res.studentName}</div>
+                      </div>
+
+                      <div style={{ background: '#f1f5f9', borderRadius: '12px', padding: '15px' }}>
+                        <div style={{ fontSize: '0.85em', fontWeight: 'bold', marginBottom: '12px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          📋 Medicine History
+                        </div>
+                        {res.history?.length === 0 ? (
+                          <div style={{ fontSize: '0.9em', color: '#64748b', fontStyle: 'italic', padding: '10px', textAlign: 'center' }}>No medicine intake recorded here.</div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+                            {res.history.map((h, j) => (
+                              <div key={j} style={{ display: 'flex', flexDirection: 'column', background: 'white', padding: '12px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                                <span style={{ fontSize: '0.85em', fontWeight: 'bold', color: '#64748b', marginBottom: '4px' }}>📅 {h.date}</span>
+                                <span style={{ color: '#0d2866', fontSize: '1.1em', fontWeight: '900' }}>💊 {h.quantity} Qty</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '20px 30px', background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn primary" onClick={() => setShowInquiryModal(false)} style={{ background: '#0d2866', borderRadius: '12px', padding: '12px 30px', fontWeight: 'bold' }}>Close Report</button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );

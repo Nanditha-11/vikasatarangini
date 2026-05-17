@@ -301,21 +301,8 @@ attendanceRouter.get("/student/:slNo", async (req, res) => {
     };
   });
 
-  // Only show dates where a session actually happened (at least one student was marked present globally)
-  const activeDates = await Attendance.distinct("date", { type: "student" });
-  const allDates = activeDates.sort((a, b) => b.localeCompare(a));
-  const presentDates = new Set(history.map(h => h.date));
-  
-  const fullLog = allDates.map(d => {
-    if (presentDates.has(d)) {
-      return history.find(h => h.date === d);
-    }
-    return {
-      date: d,
-      present: false,
-      quantity: 0
-    };
-  });
+  // Only show dates where the student was actually present to avoid confusion with erroneous dates
+  const fullLog = history;
 
   res.json({ slNo, history: fullLog });
 });

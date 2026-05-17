@@ -201,14 +201,20 @@ export function ModifyStudentsPage() {
                 <td style={{ textAlign: 'center' }}>{s.age || '-'}</td>
                 <td className="muted" style={{ textAlign: 'center' }}>{s.phone}</td>
                 <td style={{ textAlign: 'center' }}>
-                  <button 
-                    className="btn" 
-                    style={{ padding: '5px 15px', color: isMaster ? '#94a3b8' : '#0072ff', borderColor: isMaster ? '#e2e8f0' : '#0072ff', cursor: isMaster ? 'not-allowed' : 'pointer' }} 
-                    onClick={() => !isMaster && setEditingStudent(s)}
-                    disabled={isMaster}
-                  >
-                    {isMaster ? "View Only" : "Modify"}
-                  </button>
+                  {s.isVisiting ? (
+                    <div style={{ padding: '5px 10px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#94a3b8', fontSize: '0.85em', fontWeight: 'bold' }}>
+                      🔒 Visitor
+                    </div>
+                  ) : (
+                    <button 
+                      className="btn" 
+                      style={{ padding: '5px 15px', color: isMaster ? '#94a3b8' : '#0072ff', borderColor: isMaster ? '#e2e8f0' : '#0072ff', cursor: isMaster ? 'not-allowed' : 'pointer' }} 
+                      onClick={() => !isMaster && setEditingStudent(s)}
+                      disabled={isMaster}
+                    >
+                      {isMaster ? "View Only" : "Modify"}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
