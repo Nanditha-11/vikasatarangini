@@ -2,11 +2,13 @@ import React, { useState, useMemo, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAttendance } from "../hooks/useAttendance";
 import { Layout } from "../components/Layout";
+import { apiFetch } from "../lib/api";
 
 export function QRCodesPage() {
   const { rows, busy, error } = useAttendance();
   const [filter, setFilter] = useState("");
   const [networkIp, setNetworkIp] = useState(window.location.origin);
+  const [sendingId, setSendingId] = useState(null);
 
   useEffect(() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -25,6 +27,7 @@ export function QRCodesPage() {
   const user = userStr ? JSON.parse(userStr) : {};
   const district = user.district || "Main";
   const place = user.place || "Main";
+  const whatsappLink = user.whatsappLink || "";
 
   const q = filter.trim().toLowerCase();
 
@@ -40,6 +43,53 @@ export function QRCodesPage() {
         String(r.phone || "").toLowerCase().includes(q)
     );
   }, [rows, q]);
+
+  const handleSendQR = async (student) => {
+    const phone = student.phone;
+    if (!phone) {
+      alert("❌ This student has no registered phone number!");
+      return;
+    }
+    
+    // Find all students sharing the exact same phone number
+    const cleanTargetPhone = phone.replace(/\D/g, "");
+    const matchingStudents = rows.filter(r => r.phone && r.phone.replace(/\D/g, "") === cleanTargetPhone);
+    
+    setSendingId(student.slNo);
+    
+    let num = cleanTargetPhone;
+    if (num.length === 10) num = "91" + num;
+    
+    const groupLink = whatsappLink || "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
+    
+    try {
+      // Loop and send the QR Code for each matching family member
+      for (const st of matchingStudents) {
+        const encodedData = encodeURIComponent(st.slNo);
+        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+        
+        const textStr = `Jai Srimannarayana!\n\nHere is the Attendance QR Code for ${st.name} (ID: ${st.slNo}).\n\n🔗 Join Group: ${groupLink}\n\nPlease save this image to your phone and show it for fast attendance!\nదయచేసి ఈ చిత్రాన్ని మీ ఫోన్‌లో సేవ్ చేసుకోండి మరియు హాజరు త్వరగా నమోదు కావడానికి దీనిని చూపించండి!\n\n${qrUrl}`;
+        
+        await apiFetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: num, text: textStr })
+        });
+      }
+      
+      if (matchingStudents.length > 1) {
+        const names = matchingStudents.map(s => s.name).join(", ");
+        alert(`✅ QR Photos sent successfully to ${num} for all ${matchingStudents.length} family students: ${names}!`);
+      } else {
+        alert(`✅ QR Photo successfully sent to ${student.name}!`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`❌ Failed to send: ${err.message}`);
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   return (
     <Layout title="All Student QR Codes">
@@ -123,7 +173,7 @@ export function QRCodesPage() {
                 <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1em', color: '#1e293b' }}>{student.name}</h4>
                 <p style={{ margin: '0 0 16px 0', fontSize: '0.9em', color: '#64748b' }}>ID: {student.slNo}</p>
                 
-                <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '16px' }}>
                   <QRCodeSVG 
                     value={`${networkIp}/?mark=${student.slNo}`}
                     size={160}
@@ -131,6 +181,29 @@ export function QRCodesPage() {
                     includeMargin={true}
                   />
                 </div>
+
+                <button
+                  className="btn no-print"
+                  disabled={sendingId === student.slNo}
+                  onClick={() => handleSendQR(student)}
+                  style={{
+                    width: '100%',
+                    background: '#25D366',
+                    borderColor: '#25D366',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '0.9em'
+                  }}
+                >
+                  {sendingId === student.slNo ? "⏳ Sending..." : "📲 Send to WhatsApp"}
+                </button>
               </div>
             );
           })}

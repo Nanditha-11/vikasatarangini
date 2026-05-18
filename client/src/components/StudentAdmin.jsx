@@ -172,7 +172,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
       if (num) {
         if (num.length === 10) num = "91" + num;
         
-        const encodedData = encodeURIComponent(`${res.student.phone} ${res.student.name}`);
+        const encodedData = encodeURIComponent(res.student.slNo);
         const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
 
         const activeLink = (link && link.startsWith("http")) ? link : "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
@@ -181,7 +181,17 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
 
         inviteMsg += `📷 Your Attendance QR Code:\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n\n${qrUrl}`;
 
-        window.open(`https://wa.me/${num}?text=${encodeURIComponent(inviteMsg)}`, "_blank");
+        try {
+          await apiFetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: num, text: inviteMsg })
+          });
+          alert("✅ Welcome WhatsApp message sent automatically!");
+        } catch (waErr) {
+          console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
+          window.open(`https://wa.me/${num}?text=${encodeURIComponent(inviteMsg)}`, "_blank");
+        }
         setShowAddManual(false);
       }
 
@@ -297,7 +307,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
                 style={{ textTransform: 'capitalize' }}
                 value={newStudent.name}
                 onChange={(e) => {
-                  let val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  let val = e.target.value.replace(/[^a-zA-Z\s\.]/g, "");
                   // Automatically capitalize the first letter of each word but ALLOW subsequent capitals
                   const words = val.split(" ");
                   const capped = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -315,7 +325,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
                 style={{ textTransform: 'capitalize' }}
                 value={newStudent.fatherName}
                 onChange={(e) => {
-                  let val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  let val = e.target.value.replace(/[^a-zA-Z\s\.]/g, "");
                   const words = val.split(" ");
                   const capped = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
                   setNewStudent({ ...newStudent, fatherName: capped });

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { apiFetch } from "../lib/api";
 
 export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, onModifyClick, onUpdateQuantity, onDelete, onViewHistory, busy, viewMode, deletingSlNo, setDeletingSlNo, deletePass, setDeletePass, isMaster, viewDistrict, viewPlace }) {
   const navigate = useNavigate();
@@ -121,35 +122,27 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                       </button>
                     </div>
 
-                    <button 
+                                        <button 
                       className="btn" 
                       style={{ display: 'block', width: '100%', marginBottom: '8px', borderColor: '#25D366', color: '#25D366', fontWeight: 'bold' }} 
                       onClick={async () => {
                          const num = (r.phone || "").replace(/\D/g, '');
-                         const encodedData = encodeURIComponent(`${num} ${r.name}`);
-                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
-                         const textStr = `Jai Srimannarayana!\n\nHere is your Attendance QR Code for Vikasatarangini:\n\nPlease save this image to your phone and show it for fast attendance!`;
+                         const encodedData = encodeURIComponent(r.slNo);
+                         const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+                         const textStr = `Jai Srimannarayana!\n\nHere is your Attendance QR Code for Vikasatarangini:\n\nPlease save this image to your phone and show it for fast attendance!\n\n${qrUrl}`;
                          
-                         try {
-                           const response = await fetch(qrUrl);
-                           const blob = await response.blob();
-                           const fileName = `${r.name}_${num}_QR.png`.replace(/\s+/g, '_');
-                           const file = new File([blob], fileName, { type: blob.type });
-
-                           if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                             await navigator.share({
-                               title: 'Attendance QR Code',
-                               text: textStr,
-                               files: [file]
-                             });
-                             return;
-                           }
-                         } catch (e) {
-                           console.error("Native share failed", e);
-                         }
-
                          const fullPhone = num.length === 10 ? '91' + num : num;
-                         window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(textStr + '\n' + qrUrl)}`, "_blank");
+                         try {
+                           await apiFetch("/api/whatsapp/send", {
+                             method: "POST",
+                             headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ phone: fullPhone, text: textStr })
+                           });
+                           alert("✅ WhatsApp QR message sent automatically!");
+                         } catch (waErr) {
+                           console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
+                           window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(textStr)}`, "_blank");
+                         }
                       }}
                     >
                       📲 Send QR Code

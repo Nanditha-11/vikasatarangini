@@ -90,6 +90,7 @@ export function LoginPage() {
       });
       setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("vt_login_time", String(Date.now()));
       
       const redirectUrl = localStorage.getItem("vt_redirect");
       if (redirectUrl) {

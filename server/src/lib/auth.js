@@ -10,7 +10,7 @@ function signAdminToken(admin) {
     district: admin.district,
     place: admin.place,
     whatsappLink: admin.whatsappLink
-  }, secret, { expiresIn: "7d" });
+  }, secret, { expiresIn: "5h" });
 }
 
 function requireAuth(req, res, next) {

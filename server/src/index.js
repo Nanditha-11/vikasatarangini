@@ -11,6 +11,8 @@ const { attendanceRouter } = require("./routes/attendance");
 const { adminManagementRouter } = require("./routes/adminManagement");
 const { locationConfigRouter } = require("./routes/locationConfig");
 const { publicRouter } = require("./routes/public");
+const { whatsappRouter } = require("./routes/whatsapp");
+const { initWhatsApp } = require("./lib/whatsappService");
 
 const Admin = require("./models/Admin");
 
@@ -46,6 +48,7 @@ app.use("/api/attendance", attendanceRouter);
 app.use("/api/admins", adminManagementRouter);
 app.use("/api/location-config", locationConfigRouter);
 app.use("/api/public", publicRouter);
+app.use("/api/whatsapp", whatsappRouter);
 
 app.get("/api/public/network-ip", (req, res) => {
   res.json({ ip: getLocalIp(), port: process.env.PORT || 5000 });
@@ -136,3 +139,4 @@ async function initialize() {
 }
 
 initialize();
+initWhatsApp().catch(err => console.error("[WhatsApp] Failed to initialize:", err));

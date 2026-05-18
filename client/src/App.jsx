@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { LoginPage } from "./pages/LoginPage";
@@ -13,12 +14,34 @@ import { PublicStudentHistoryPage } from "./pages/PublicStudentHistoryPage";
 import { QRCodesPage } from "./pages/QRCodesPage";
 import { ScanPage } from "./pages/ScanPage";
 
+function checkSessionExpired() {
+  const token = localStorage.getItem("vt_token");
+  if (!token) return false;
+  
+  const loginTime = localStorage.getItem("vt_login_time");
+  if (!loginTime) {
+    // Start countdown now for any active sessions signed in before this feature update
+    localStorage.setItem("vt_login_time", String(Date.now()));
+    return false;
+  }
+  
+  const FIVE_HOURS = 5 * 60 * 60 * 1000;
+  if (Date.now() - Number(loginTime) > FIVE_HOURS) {
+    localStorage.removeItem("vt_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("vt_login_time");
+    return true;
+  }
+  return false;
+}
+
 function RequireAuth({ children, adminOnly = false }) {
+  const isExpired = checkSessionExpired();
   const token = localStorage.getItem("vt_token");
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   
-  if (!token) {
+  if (isExpired || !token) {
     const fullUrl = window.location.pathname + window.location.search;
     if (fullUrl !== "/" && fullUrl !== "/login") {
       localStorage.setItem("vt_redirect", fullUrl);
@@ -35,10 +58,14 @@ function RequireAuth({ children, adminOnly = false }) {
 }
 
 function RequireMaster({ children }) {
+  const isExpired = checkSessionExpired();
   const token = localStorage.getItem("vt_token");
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
-  if (!token || user?.role !== "master") return <Navigate to="/" replace />;
+  
+  if (isExpired || !token || user?.role !== "master") {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }
 
@@ -48,6 +75,32 @@ import DeniedAdminsPage from "./pages/DeniedAdminsPage";
 import { Layout } from "./components/Layout";
 
 export default function App() {
+  useEffect(() => {
+    const checkTimeout = () => {
+      const token = localStorage.getItem("vt_token");
+      if (!token) return;
+
+      const loginTime = localStorage.getItem("vt_login_time");
+      if (loginTime) {
+        const FIVE_HOURS = 5 * 60 * 60 * 1000;
+        if (Date.now() - Number(loginTime) > FIVE_HOURS) {
+          localStorage.removeItem("vt_token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("vt_login_time");
+          alert("⏱️ Your session has expired after 5 hours. Please login again.");
+          window.location.href = "/login";
+        }
+      }
+    };
+
+    // Run check immediately on load
+    checkTimeout();
+
+    // Check periodically every 30 seconds
+    const interval = setInterval(checkTimeout, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

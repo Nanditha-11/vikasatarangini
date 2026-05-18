@@ -10,6 +10,7 @@ import { WhatsAppEditor } from "../components/WhatsAppEditor";
 import { StudentAdmin } from "../components/StudentAdmin";
 import { MarkingModal } from "../components/MarkingModal";
 import { ModifyModal } from "../components/ModifyModal";
+import { BroadcastModal } from "../components/BroadcastModal";
 import { toIsoDate, todayParts } from "../lib/date";
 
 
@@ -73,6 +74,7 @@ export function AttendancePage() {
   const [modifyingStudent, setModifyingStudent] = useState(null);
   const [inquiryResults, setInquiryResults] = useState(null);
   const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
   const handleGlobalInquiry = async (phone) => {
     const p = phone?.replace(/\D/g, "");
@@ -161,6 +163,15 @@ export function AttendancePage() {
       if (!baseMsg.includes("Jai Srimannarayana")) {
         baseMsg = "Jai Srimannarayana!\n" + baseMsg;
       }
+
+      // Generate and append unique QR Code URL (QuickChart for force .png previews on WhatsApp)
+      const encodedData = encodeURIComponent(slNo);
+      const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+      baseMsg += `\n\n📷 Your Attendance QR Code / మీ అటెండెన్స్ QR కోడ్:\n`;
+      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
+      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n\n`;
+      baseMsg += `${qrUrl}`;
+
       const text = encodeURIComponent(baseMsg);
       const phone = studentPhone.replace(/\D/g, '');
       const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
@@ -168,7 +179,17 @@ export function AttendancePage() {
       console.log(`[Auto-WhatsApp] Sending to ${fullPhone}: ${baseMsg}`);
 
       if (fullPhone && fullPhone.length >= 10) {
-        window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+        try {
+          await apiFetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: fullPhone, text: baseMsg })
+          });
+          console.log("✅ Attendance WhatsApp confirmation sent automatically!");
+        } catch (waErr) {
+          console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
+          window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+        }
       } else {
         alert("Invalid student phone number. Message not sent.");
       }
@@ -209,6 +230,7 @@ export function AttendancePage() {
   const handleConfirmModify = async ({ qty, remark, skipWhatsApp = false }) => {
     if (!modifyingStudent) return;
     const sPhone = modifyingStudent.phone;
+    const sName = modifyingStudent.name;
     const nextRows = rows.map(r =>
       r.slNo === modifyingStudent.slNo ? { ...r, quantity: Number(qty), remark: remark } : r
     );
@@ -221,12 +243,31 @@ export function AttendancePage() {
       if (!baseMsg.includes("Jai Srimannarayana")) {
         baseMsg = "Jai Srimannarayana!\n" + baseMsg;
       }
+
+      // Generate and append unique QR Code URL (QuickChart for force .png previews on WhatsApp)
+      const encodedData = encodeURIComponent(modifyingStudent.slNo);
+      const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+      baseMsg += `\n\n📷 Your Attendance QR Code / మీ అటెండెన్స్ QR కోడ్:\n`;
+      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
+      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n\n`;
+      baseMsg += `${qrUrl}`;
+
       const text = encodeURIComponent(baseMsg);
       const phone = sPhone.replace(/\D/g, '');
       const fullPhone = phone.startsWith('91') ? phone : `91${phone}`;
 
       if (fullPhone && fullPhone.length >= 10) {
-        window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+        try {
+          await apiFetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: fullPhone, text: baseMsg })
+          });
+          console.log("✅ Attendance WhatsApp confirmation sent automatically!");
+        } catch (waErr) {
+          console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
+          window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+        }
       }
     }
   };
@@ -372,6 +413,21 @@ export function AttendancePage() {
                     onClick={() => window.open('/qrcodes', '_blank')}
                   >
                     🖨️ QR Codes
+                  </button>
+                  <button 
+                    style={{
+                      background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      boxShadow: '0 2px 6px rgba(37, 211, 102, 0.2)',
+                      borderRadius: '50px',
+                      cursor: 'pointer'
+                    }} 
+                    onClick={() => setShowBroadcastModal(true)}
+                  >
+                    📢 Broadcast Message
                   </button>
                 </>
               );
@@ -523,6 +579,11 @@ export function AttendancePage() {
         />
       )}
 
+      <BroadcastModal
+        isOpen={showBroadcastModal}
+        onClose={() => setShowBroadcastModal(false)}
+        rows={rows}
+      />
       {showInquiryModal && (
         <div className="modal-overlay" style={{ zIndex: 2000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="card" style={{ maxWidth: '700px', width: '95%', padding: '0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: 'none' }}>
