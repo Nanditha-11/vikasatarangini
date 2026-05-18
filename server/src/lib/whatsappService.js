@@ -1,4 +1,4 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
@@ -9,6 +9,7 @@ let isReady = false;
 let latestQr = null;
 let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected'
 let qrGenerationTime = null;
+let lastError = null;
 
 const authFolder = path.join(__dirname, '../../.baileys-auth');
 
@@ -16,10 +17,48 @@ async function initWhatsApp() {
   console.log('[WhatsApp] Initializing WhatsApp Client...');
   connectionStatus = 'connecting';
   
+  // Ensure the auth folder exists and has write permissions
+  try {
+    if (!fs.existsSync(authFolder)) {
+      fs.mkdirSync(authFolder, { recursive: true });
+      console.log(`[WhatsApp] Created auth directory at: ${authFolder}`);
+    }
+    // Test write permission by writing a temp file
+    const tempFile = path.join(authFolder, '.write-test');
+    fs.writeFileSync(tempFile, 'test');
+    fs.unlinkSync(tempFile);
+    console.log('[WhatsApp] Auth directory write test successful.');
+  } catch (err) {
+    console.error('[WhatsApp] Auth directory validation failed:', err);
+    lastError = {
+      stage: 'auth_directory_validation',
+      message: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Fetch the latest WA Web version to avoid connection failures
+  let version = [2, 3000, 1015901307]; // fallback version
+  try {
+    const latest = await fetchLatestBaileysVersion();
+    version = latest.version;
+    console.log(`[WhatsApp] Using dynamically fetched WA Web version: ${version.join('.')}`);
+  } catch (err) {
+    console.warn('[WhatsApp] Failed to fetch latest WA Web version, using fallback:', err);
+    lastError = {
+      stage: 'fetch_baileys_version',
+      message: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString()
+    };
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
   
   sock = makeWASocket({
     auth: state,
+    version,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false
   });
@@ -37,6 +76,17 @@ async function initWhatsApp() {
       connectionStatus = 'disconnected';
       console.log('[WhatsApp] New QR code generated. Scan to link device.');
       qrcode.generate(qr, { small: true });
+    }
+
+    if (lastDisconnect && lastDisconnect.error) {
+      lastError = {
+        stage: 'connection_update_error',
+        message: lastDisconnect.error.message,
+        stack: lastDisconnect.error.stack,
+        statusCode: lastDisconnect.error.output?.statusCode,
+        timestamp: new Date().toISOString()
+      };
+      console.error('[WhatsApp] Connection error:', lastDisconnect.error);
     }
 
     if (connection === 'close') {
@@ -153,9 +203,26 @@ function getStatus() {
   };
 }
 
+function getDiagnose() {
+  return {
+    connectionStatus,
+    isReady,
+    hasSocket: !!sock,
+    hasLatestQr: !!latestQr,
+    qrGenerationTime: qrGenerationTime ? new Date(qrGenerationTime).toISOString() : null,
+    authFolder,
+    authFolderExists: fs.existsSync(authFolder),
+    lastError,
+    nodeVersion: process.version,
+    platform: process.platform,
+    env: process.env.NODE_ENV
+  };
+}
+
 module.exports = {
   initWhatsApp,
   sendWhatsAppMessage,
   getStatus,
-  logoutWhatsApp
+  logoutWhatsApp,
+  getDiagnose
 };

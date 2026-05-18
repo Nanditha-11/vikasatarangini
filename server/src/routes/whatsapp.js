@@ -1,5 +1,5 @@
 const express = require('express');
-const { sendWhatsAppMessage, getStatus, logoutWhatsApp } = require('../lib/whatsappService');
+const { sendWhatsAppMessage, getStatus, logoutWhatsApp, getDiagnose } = require('../lib/whatsappService');
 
 const router = express.Router();
 
@@ -7,6 +7,15 @@ const router = express.Router();
 router.get('/status', (req, res) => {
   try {
     res.json(getStatus());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/whatsapp/diagnose
+router.get('/diagnose', (req, res) => {
+  try {
+    res.json(getDiagnose());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
