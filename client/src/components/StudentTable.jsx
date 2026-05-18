@@ -138,7 +138,10 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                              headers: { "Content-Type": "application/json" },
                              body: JSON.stringify({ phone: fullPhone, text: textStr })
                            });
-                           alert("✅ WhatsApp QR message sent automatically!");
+                           const sendManual = window.confirm("✅ Automated WhatsApp QR message triggered!\n\nNOTE: WhatsApp Web sometimes blocks automated messages to new numbers unless they chat first.\n\nWould you like to also open a manual WhatsApp link to guarantee delivery?");
+                           if (sendManual) {
+                             window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(textStr)}`, "_blank");
+                           }
                          } catch (waErr) {
                            console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
                            window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(textStr)}`, "_blank");

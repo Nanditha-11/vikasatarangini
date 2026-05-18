@@ -77,11 +77,25 @@ export function QRCodesPage() {
         });
       }
       
+      let successMsg = "";
+      let lastTextStr = "";
       if (matchingStudents.length > 1) {
         const names = matchingStudents.map(s => s.name).join(", ");
-        alert(`✅ QR Photos sent successfully to ${num} for all ${matchingStudents.length} family students: ${names}!`);
+        successMsg = `✅ Automated QR Photos triggered for all ${matchingStudents.length} family students: ${names}!`;
+        // Create a combined manual message text containing links to all QR codes for family
+        lastTextStr = `Jai Srimannarayana!\n\nHere are the Attendance QR Codes for your children:\n\n` + 
+          matchingStudents.map(st => `*${st.name}* (ID: ${st.slNo}):\nhttps://quickchart.io/qr?text=${encodeURIComponent(st.slNo)}&size=300&ext=.png`).join('\n\n') + 
+          `\n\n🔗 Join Group: ${groupLink}\n\nPlease save these QR codes to your phone!`;
       } else {
-        alert(`✅ QR Photo successfully sent to ${student.name}!`);
+        successMsg = `✅ Automated QR Photo triggered for ${student.name}!`;
+        const encodedData = encodeURIComponent(student.slNo);
+        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+        lastTextStr = `Jai Srimannarayana!\n\nHere is the Attendance QR Code for ${student.name} (ID: ${student.slNo}).\n\n🔗 Join Group: ${groupLink}\n\nPlease save this image to your phone and show it for fast attendance!\n\n${qrUrl}`;
+      }
+
+      const sendManual = window.confirm(`${successMsg}\n\nNOTE: WhatsApp Web sometimes blocks automated messages to new numbers unless they chat first.\n\nWould you like to also open a manual WhatsApp link to guarantee delivery?`);
+      if (sendManual) {
+        window.open(`https://wa.me/${num}?text=${encodeURIComponent(lastTextStr)}`, "_blank");
       }
     } catch (err) {
       console.error(err);
