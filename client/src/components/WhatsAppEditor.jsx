@@ -1,10 +1,39 @@
-import { useState } from "react";
- 
+import { useState, useEffect } from "react";
+import { apiFetch } from "../lib/api";
+
 export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappLink, onSave, busy }) {
   const [editMsg, setEditMsg] = useState(false);
   const [editLink, setEditLink] = useState(false);
+  const [botPhone, setBotPhone] = useState(null);
+  const [copied, setCopied] = useState(false);
+  
   const isValidLink = !whatsappLink || whatsappLink.startsWith("http");
- 
+
+  useEffect(() => {
+    apiFetch("/api/whatsapp/status")
+      .then(data => {
+        if (data && data.phone) {
+          setBotPhone(data.phone);
+        }
+      })
+      .catch(err => console.error("Failed to fetch WhatsApp bot phone:", err));
+  }, []);
+
+  const shareText = "Hi Vikasatarangini! I want to receive my child's attendance card and updates.";
+  const shareableUrl = botPhone 
+    ? `https://wa.me/${botPhone}?text=${encodeURIComponent(shareText)}` 
+    : "";
+
+  const handleCopy = () => {
+    if (!shareableUrl) return;
+    navigator.clipboard.writeText(shareableUrl)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(err => console.error("Failed to copy link:", err));
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
       
@@ -35,7 +64,7 @@ export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappL
             </button>
           )}
         </div>
- 
+
         {editMsg ? (
           <>
             <textarea
@@ -71,7 +100,7 @@ export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappL
           </div>
         )}
       </div>
- 
+
       {/* 2. Link Box */}
       <div 
         className="card"
@@ -110,7 +139,7 @@ export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappL
             </div>
           )}
         </div>
- 
+
         {editLink ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -145,6 +174,67 @@ export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappL
         ) : (
           <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.4)', borderRadius: '12px', fontSize: '0.85em', color: '#166534', wordBreak: 'break-all' }}>
             {whatsappLink || "No link provided"}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Shareable Bot Link Box */}
+      <div 
+        className="card"
+        style={{
+          background: "rgba(18, 140, 126, 0.05)",
+          padding: "20px",
+          borderRadius: "20px",
+          border: "1px solid rgba(18, 140, 126, 0.2)",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}
+      >
+        <h4 style={{ margin: 0, color: '#0f5132', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📲</span> Get Parents to Chat First
+        </h4>
+        <p style={{ margin: 0, fontSize: '0.85em', color: '#146c43', lineHeight: '1.4' }}>
+          Share this special link with parents. When they click it, it opens a chat with you and pre-writes a message so they can activate automated updates in one tap!
+        </p>
+        {botPhone ? (
+          <div 
+            style={{ 
+              display: 'flex', 
+              gap: '8px', 
+              alignItems: 'center', 
+              background: 'white', 
+              padding: '6px 12px', 
+              borderRadius: '12px', 
+              border: '1px solid rgba(18, 140, 126, 0.15)' 
+            }}
+          >
+            <span style={{ fontSize: '0.82em', color: '#198754', flex: 1, wordBreak: 'break-all', fontFamily: 'monospace' }}>
+              {shareableUrl}
+            </span>
+            <button 
+              className="btn" 
+              style={{ 
+                borderColor: '#198754', 
+                color: 'white', 
+                background: copied ? '#146c43' : '#198754', 
+                padding: '6px 14px', 
+                fontSize: '0.82em',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                border: 'none',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={handleCopy}
+            >
+              {copied ? "Copied! ✓" : "Copy Link"}
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: '8px 12px', background: 'rgba(255,193,7,0.1)', borderRadius: '12px', fontSize: '0.82em', color: '#854d0e', textAlign: 'center', fontWeight: 'bold' }}>
+            ⚠️ Link will generate once WhatsApp is linked & active.
           </div>
         )}
       </div>

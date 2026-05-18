@@ -201,12 +201,20 @@ function getStatus() {
     }
     return {
       status: 'expired',
-      qr: null
+      qr: null,
+      phone: null
     };
   }
+
+  let botPhone = null;
+  if (sock && sock.user && sock.user.id) {
+    botPhone = sock.user.id.split(':')[0].split('@')[0];
+  }
+
   return {
     status: connectionStatus,
-    qr: latestQr
+    qr: latestQr,
+    phone: botPhone
   };
 }
 
