@@ -151,11 +151,18 @@ async function sendWhatsAppMessage(phone, text) {
     cleanText = cleanText.trim();
 
     console.log(`[WhatsApp] Sending QR code as DIRECT PHOTO to ${jid}...`);
-    await sock.sendMessage(jid, { 
-      image: { url: imageUrl }, 
-      caption: cleanText 
-    });
-    return { success: true };
+    try {
+      await sock.sendMessage(jid, { 
+        image: { url: imageUrl }, 
+        caption: cleanText 
+      });
+      return { success: true };
+    } catch (sendImageError) {
+      console.error('[WhatsApp] Direct photo message failed. Falling back to plain text message:', sendImageError);
+      // Fallback: Send the original full text containing the QR link
+      await sock.sendMessage(jid, { text });
+      return { success: true, warning: 'Failed to send image, fallback to text successful' };
+    }
   }
   
   console.log(`[WhatsApp] Sending standard text message to ${jid}...`);
