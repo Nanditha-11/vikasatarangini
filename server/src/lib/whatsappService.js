@@ -4,33 +4,46 @@ const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
 
-let sock = null;
-let isReady = false;
-let latestQr = null;
-let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected'
-let qrGenerationTime = null;
-let lastError = null;
+// Multi-tenant instances map
+// Keys are tenantId (admin.username)
+// Values are: { sock, isReady, latestQr, connectionStatus, qrGenerationTime, lastError, authFolder }
+const instances = {};
 
-const authFolder = path.join(__dirname, '../../.baileys-auth');
+function getOrCreateInstance(tenantId) {
+  const cleanId = String(tenantId || 'global').trim();
+  if (!instances[cleanId]) {
+    instances[cleanId] = {
+      sock: null,
+      isReady: false,
+      latestQr: null,
+      connectionStatus: 'disconnected', // 'disconnected', 'connecting', 'connected'
+      qrGenerationTime: null,
+      lastError: null,
+      authFolder: path.join(__dirname, `../../.baileys-auth-${cleanId}`)
+    };
+  }
+  return instances[cleanId];
+}
 
-async function initWhatsApp() {
-  console.log('[WhatsApp] Initializing WhatsApp Client...');
-  connectionStatus = 'connecting';
+async function initWhatsApp(tenantId = 'global') {
+  const inst = getOrCreateInstance(tenantId);
+  console.log(`[WhatsApp] Initializing WhatsApp Client for tenant: ${tenantId}...`);
+  inst.connectionStatus = 'connecting';
   
   // Ensure the auth folder exists and has write permissions
   try {
-    if (!fs.existsSync(authFolder)) {
-      fs.mkdirSync(authFolder, { recursive: true });
-      console.log(`[WhatsApp] Created auth directory at: ${authFolder}`);
+    if (!fs.existsSync(inst.authFolder)) {
+      fs.mkdirSync(inst.authFolder, { recursive: true });
+      console.log(`[WhatsApp] Created auth directory at: ${inst.authFolder}`);
     }
     // Test write permission by writing a temp file
-    const tempFile = path.join(authFolder, '.write-test');
+    const tempFile = path.join(inst.authFolder, '.write-test');
     fs.writeFileSync(tempFile, 'test');
     fs.unlinkSync(tempFile);
-    console.log('[WhatsApp] Auth directory write test successful.');
+    console.log(`[WhatsApp] Auth directory write test successful for ${tenantId}.`);
   } catch (err) {
-    console.error('[WhatsApp] Auth directory validation failed:', err);
-    lastError = {
+    console.error(`[WhatsApp] Auth directory validation failed for ${tenantId}:`, err);
+    inst.lastError = {
       stage: 'auth_directory_validation',
       message: err.message,
       stack: err.stack,
@@ -43,10 +56,10 @@ async function initWhatsApp() {
   try {
     const latest = await fetchLatestBaileysVersion();
     version = latest.version;
-    console.log(`[WhatsApp] Using dynamically fetched WA Web version: ${version.join('.')}`);
+    console.log(`[WhatsApp] Using dynamically fetched WA Web version: ${version.join('.')} for ${tenantId}`);
   } catch (err) {
-    console.warn('[WhatsApp] Failed to fetch latest WA Web version, using fallback:', err);
-    lastError = {
+    console.warn(`[WhatsApp] Failed to fetch latest WA Web version for ${tenantId}, using fallback:`, err);
+    inst.lastError = {
       stage: 'fetch_baileys_version',
       message: err.message,
       stack: err.stack,
@@ -54,77 +67,84 @@ async function initWhatsApp() {
     };
   }
 
-  const { state, saveCreds } = await useMultiFileAuthState(authFolder);
+  const { state, saveCreds } = await useMultiFileAuthState(inst.authFolder);
   
-  sock = makeWASocket({
+  inst.sock = makeWASocket({
     auth: state,
     version,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false
   });
 
-  sock.ev.on('creds.update', saveCreds);
+  inst.sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  inst.sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
     
     if (qr) {
-      if (!qrGenerationTime) {
-        qrGenerationTime = Date.now();
+      if (!inst.qrGenerationTime) {
+        inst.qrGenerationTime = Date.now();
       }
-      latestQr = qr;
-      connectionStatus = 'disconnected';
-      console.log('[WhatsApp] New QR code generated. Scan to link device.');
+      inst.latestQr = qr;
+      inst.connectionStatus = 'disconnected';
+      console.log(`[WhatsApp] New QR code generated for ${tenantId}. Scan to link device.`);
       qrcode.generate(qr, { small: true });
     }
 
     if (lastDisconnect && lastDisconnect.error) {
-      lastError = {
+      inst.lastError = {
         stage: 'connection_update_error',
         message: lastDisconnect.error.message,
         stack: lastDisconnect.error.stack,
         statusCode: lastDisconnect.error.output?.statusCode,
         timestamp: new Date().toISOString()
       };
-      console.error('[WhatsApp] Connection error:', lastDisconnect.error);
+      console.error(`[WhatsApp] Connection error for ${tenantId}:`, lastDisconnect.error);
     }
 
     if (connection === 'close') {
-      isReady = false;
-      latestQr = null;
+      inst.isReady = false;
+      inst.latestQr = null;
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('[WhatsApp] Connection closed. Reason:', lastDisconnect?.error, 'Reconnecting:', shouldReconnect);
+      console.log(`[WhatsApp] Connection closed for ${tenantId}. Reason:`, lastDisconnect?.error, 'Reconnecting:', shouldReconnect);
       
       if (shouldReconnect) {
-        const expired = qrGenerationTime && (Date.now() - qrGenerationTime > 12 * 60 * 60 * 1000);
+        const expired = inst.qrGenerationTime && (Date.now() - inst.qrGenerationTime > 12 * 60 * 60 * 1000);
         if (expired) {
-          console.log('[WhatsApp] Reconnect bypassed: Pairing session expired.');
-          connectionStatus = 'disconnected';
+          console.log(`[WhatsApp] Reconnect bypassed for ${tenantId}: Pairing session expired.`);
+          inst.connectionStatus = 'disconnected';
         } else {
-          initWhatsApp();
+          initWhatsApp(tenantId);
         }
       } else {
-        qrGenerationTime = null;
-        connectionStatus = 'disconnected';
+        inst.qrGenerationTime = null;
+        inst.connectionStatus = 'disconnected';
         try {
-          fs.rmSync(authFolder, { recursive: true, force: true });
+          fs.rmSync(inst.authFolder, { recursive: true, force: true });
         } catch (e) {
-          console.error('[WhatsApp] Failed to clear auth folder:', e);
+          console.error(`[WhatsApp] Failed to clear auth folder for ${tenantId}:`, e);
         }
-        console.log('[WhatsApp] Logged out. Auth state cleared.');
+        console.log(`[WhatsApp] Logged out for ${tenantId}. Auth state cleared.`);
       }
     } else if (connection === 'open') {
-      isReady = true;
-      latestQr = null;
-      qrGenerationTime = null;
-      connectionStatus = 'connected';
-      console.log('[WhatsApp] Client is READY and CONNECTED!');
+      inst.isReady = true;
+      inst.latestQr = null;
+      inst.qrGenerationTime = null;
+      inst.connectionStatus = 'connected';
+      console.log(`[WhatsApp] Client ${tenantId} is READY and CONNECTED!`);
     }
   });
 }
 
-async function sendWhatsAppMessage(phone, text) {
-  if (!isReady || !sock) {
+async function sendWhatsAppMessage(tenantId, phone, text) {
+  const cleanId = String(tenantId || 'global').trim();
+  const inst = getOrCreateInstance(cleanId);
+  
+  if (!inst.sock && inst.connectionStatus === 'disconnected') {
+    await initWhatsApp(cleanId);
+  }
+
+  if (!inst.isReady || !inst.sock) {
     throw new Error('WhatsApp client is not ready. Please link your device first.');
   }
 
@@ -150,53 +170,57 @@ async function sendWhatsAppMessage(phone, text) {
     cleanText = cleanText.replace(/దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి\. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!?/gi, '').trim();
     cleanText = cleanText.trim();
 
-    console.log(`[WhatsApp] Sending QR code as DIRECT PHOTO to ${jid}...`);
+    console.log(`[WhatsApp] Sending QR code as DIRECT PHOTO to ${jid} via tenant ${cleanId}...`);
     try {
-      await sock.sendMessage(jid, { 
+      await inst.sock.sendMessage(jid, { 
         image: { url: imageUrl }, 
         caption: cleanText 
       });
       return { success: true };
     } catch (sendImageError) {
-      console.error('[WhatsApp] Direct photo message failed. Falling back to plain text message:', sendImageError);
+      console.error(`[WhatsApp] Direct photo message failed via ${cleanId}. Falling back to plain text message:`, sendImageError);
       // Fallback: Send the original full text containing the QR link
-      await sock.sendMessage(jid, { text });
+      await inst.sock.sendMessage(jid, { text });
       return { success: true, warning: 'Failed to send image, fallback to text successful' };
     }
   }
   
-  console.log(`[WhatsApp] Sending standard text message to ${jid}...`);
-  await sock.sendMessage(jid, { text });
+  console.log(`[WhatsApp] Sending standard text message to ${jid} via tenant ${cleanId}...`);
+  await inst.sock.sendMessage(jid, { text });
   return { success: true };
 }
 
-async function logoutWhatsApp() {
-  if (sock) {
+async function logoutWhatsApp(tenantId = 'global') {
+  const cleanId = String(tenantId || 'global').trim();
+  const inst = getOrCreateInstance(cleanId);
+  if (inst.sock) {
     try {
-      await sock.logout();
+      await inst.sock.logout();
     } catch (e) {
-      console.error('[WhatsApp] Sock logout failed:', e);
+      console.error(`[WhatsApp] Sock logout failed for ${cleanId}:`, e);
     }
   }
-  isReady = false;
-  latestQr = null;
-  qrGenerationTime = null;
-  connectionStatus = 'disconnected';
+  inst.isReady = false;
+  inst.latestQr = null;
+  inst.qrGenerationTime = null;
+  inst.connectionStatus = 'disconnected';
   try {
-    fs.rmSync(authFolder, { recursive: true, force: true });
+    fs.rmSync(inst.authFolder, { recursive: true, force: true });
   } catch (e) {
-    console.error('[WhatsApp] Failed to clear auth folder on logout:', e);
+    console.error(`[WhatsApp] Failed to clear auth folder on logout for ${cleanId}:`, e);
   }
-  initWhatsApp();
+  await initWhatsApp(cleanId);
 }
 
-function getStatus() {
-  const expired = qrGenerationTime && (Date.now() - qrGenerationTime > 12 * 60 * 60 * 1000);
-  if (expired && connectionStatus !== 'connected') {
-    if (sock && connectionStatus !== 'expired') {
-      console.log('[WhatsApp] QR pairing code expired after 12 hours.');
+function getStatus(tenantId = 'global') {
+  const cleanId = String(tenantId || 'global').trim();
+  const inst = getOrCreateInstance(cleanId);
+  const expired = inst.qrGenerationTime && (Date.now() - inst.qrGenerationTime > 12 * 60 * 60 * 1000);
+  if (expired && inst.connectionStatus !== 'connected') {
+    if (inst.sock && inst.connectionStatus !== 'expired') {
+      console.log(`[WhatsApp] QR pairing code expired for ${cleanId} after 12 hours.`);
       try {
-        sock.end();
+        inst.sock.end();
       } catch (e) {}
     }
     return {
@@ -207,27 +231,34 @@ function getStatus() {
   }
 
   let botPhone = null;
-  if (sock && sock.user && sock.user.id) {
-    botPhone = sock.user.id.split(':')[0].split('@')[0];
+  if (inst.sock && inst.sock.user && inst.sock.user.id) {
+    botPhone = inst.sock.user.id.split(':')[0].split('@')[0];
+  }
+
+  let status = inst.connectionStatus;
+  if (status === 'connected' && (!inst.isReady || !botPhone)) {
+    status = 'disconnected';
   }
 
   return {
-    status: connectionStatus,
-    qr: latestQr,
+    status,
+    qr: inst.latestQr,
     phone: botPhone
   };
 }
 
-function getDiagnose() {
+function getDiagnose(tenantId = 'global') {
+  const cleanId = String(tenantId || 'global').trim();
+  const inst = getOrCreateInstance(cleanId);
   return {
-    connectionStatus,
-    isReady,
-    hasSocket: !!sock,
-    hasLatestQr: !!latestQr,
-    qrGenerationTime: qrGenerationTime ? new Date(qrGenerationTime).toISOString() : null,
-    authFolder,
-    authFolderExists: fs.existsSync(authFolder),
-    lastError,
+    connectionStatus: inst.connectionStatus,
+    isReady: inst.isReady,
+    hasSocket: !!inst.sock,
+    hasLatestQr: !!inst.latestQr,
+    qrGenerationTime: inst.qrGenerationTime ? new Date(inst.qrGenerationTime).toISOString() : null,
+    authFolder: inst.authFolder,
+    authFolderExists: fs.existsSync(inst.authFolder),
+    lastError: inst.lastError,
     nodeVersion: process.version,
     platform: process.platform,
     env: process.env.NODE_ENV

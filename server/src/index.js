@@ -133,10 +133,23 @@ async function initialize() {
     });
 
     console.log("Database initialized successfully");
+
+    // Auto-init WhatsApp for all approved admins
+    const activeAdmins = await Admin.find({ status: "approved" }).lean();
+    for (const admin of activeAdmins) {
+      if (admin.username) {
+        initWhatsApp(admin.username).catch(err => 
+          console.error(`[WhatsApp] Failed to auto-initialize for ${admin.username}:`, err)
+        );
+      }
+    }
+    // Also init for Master Admin
+    initWhatsApp("Admin").catch(err => 
+      console.error(`[WhatsApp] Failed to auto-initialize for Master Admin:`, err)
+    );
   } catch (err) {
     console.error("Initialization failed:", err);
   }
 }
 
 initialize();
-initWhatsApp().catch(err => console.error("[WhatsApp] Failed to initialize:", err));

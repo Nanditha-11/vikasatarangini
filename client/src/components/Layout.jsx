@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { setToken, apiFetch } from "../lib/api";
 
@@ -18,6 +18,11 @@ export function Layout({ title, subtitle, children }) {
   const [waQr, setWaQr] = useState(null);
   const [showWaModal, setShowWaModal] = useState(false);
 
+  const showWaModalRef = useRef(showWaModal);
+  useEffect(() => {
+    showWaModalRef.current = showWaModal;
+  }, [showWaModal]);
+
   useEffect(() => {
     let active = true;
     const fetchStatus = async () => {
@@ -26,8 +31,10 @@ export function Layout({ title, subtitle, children }) {
         if (active) {
           setWaStatus(prev => {
             if (prev !== "connected" && data.status === "connected") {
+              if (showWaModalRef.current) {
+                alert("✅ WhatsApp Connected & Linked Successfully!");
+              }
               setShowWaModal(false);
-              alert("✅ WhatsApp Connected & Linked Successfully!");
             }
             return data.status;
           });

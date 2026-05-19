@@ -10,6 +10,16 @@ export function QRCodesPage() {
   const [networkIp, setNetworkIp] = useState(window.location.origin);
   const [sendingId, setSendingId] = useState(null);
 
+  // Bulk QR codes states
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkCurrentIndex, setBulkCurrentIndex] = useState(0);
+  const [bulkSuccessCount, setBulkSuccessCount] = useState(0);
+  const [bulkFailCount, setBulkFailCount] = useState(0);
+  const [bulkCompleted, setBulkCompleted] = useState(false);
+  const [bulkErrors, setBulkErrors] = useState([]);
+  const abortBulkRef = React.useRef(false);
+
   useEffect(() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       fetch('/api/public/network-ip')
@@ -93,16 +103,93 @@ export function QRCodesPage() {
         lastTextStr = `Jai Srimannarayana!\n\nHere is the Attendance QR Code for ${student.name} (ID: ${student.slNo}).\n\n🔗 Join Group: ${groupLink}\n\nPlease save this image to your phone and show it for fast attendance!\n\n${qrUrl}`;
       }
 
-      const sendManual = window.confirm(`${successMsg}\n\nNOTE: WhatsApp Web sometimes blocks automated messages to new numbers unless they chat first.\n\nWould you like to also open a manual WhatsApp link to guarantee delivery?`);
-      if (sendManual) {
-        window.open(`https://wa.me/${num}?text=${encodeURIComponent(lastTextStr)}`, "_blank");
-      }
+      alert(successMsg);
     } catch (err) {
       console.error(err);
       alert(`❌ Failed to send: ${err.message}`);
     } finally {
       setSendingId(null);
     }
+  };
+
+  const handleSendBulk = async () => {
+    // Group visibleRows by unique phone number
+    const uniquePhonesMap = {};
+    visibleRows.forEach(student => {
+      if (!student.phone) return;
+      const cleanPhone = student.phone.replace(/\D/g, "");
+      if (!cleanPhone) return;
+      if (!uniquePhonesMap[cleanPhone]) {
+        uniquePhonesMap[cleanPhone] = [];
+      }
+      uniquePhonesMap[cleanPhone].push(student);
+    });
+
+    const queue = Object.keys(uniquePhonesMap).map(phone => ({
+      phone: phone,
+      students: uniquePhonesMap[phone]
+    }));
+
+    if (queue.length === 0) {
+      alert("No students with valid phone numbers in the current filtered list!");
+      return;
+    }
+
+    const confirmStart = window.confirm(`Are you sure you want to send QR Codes to ${queue.length} unique phone contacts (representing ${visibleRows.length} students)?`);
+    if (!confirmStart) return;
+
+    setBulkSending(true);
+    setBulkCompleted(false);
+    setBulkCurrentIndex(0);
+    setBulkSuccessCount(0);
+    setBulkFailCount(0);
+    setBulkErrors([]);
+    abortBulkRef.current = false;
+    setShowBulkModal(true);
+
+    const groupLink = whatsappLink || "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
+
+    for (let i = 0; i < queue.length; i++) {
+      if (abortBulkRef.current) {
+        console.log("Bulk send cancelled by user.");
+        break;
+      }
+
+      const item = queue[i];
+      setBulkCurrentIndex(i);
+
+      let num = item.phone;
+      if (num.length === 10) num = "91" + num;
+
+      try {
+        // Send QR code for each student associated with this phone number
+        for (const st of item.students) {
+          const encodedData = encodeURIComponent(st.slNo);
+          const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+          
+          const textStr = `Jai Srimannarayana!\n\nHere is the Attendance QR Code for ${st.name} (ID: ${st.slNo}).\n\n🔗 Join Group: ${groupLink}\n\nPlease save this image to your phone and show it for fast attendance!\nదయచేసి ఈ చిత్రాన్ని మీ ఫోన్‌లో సేవ్ చేసుకోండి మరియు హాజరు త్వరగా నమోదు కావడానికి దీనిని చూపించండి!\n\n${qrUrl}`;
+          
+          await apiFetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: num, text: textStr })
+          });
+        }
+        setBulkSuccessCount(prev => prev + 1);
+      } catch (err) {
+        console.error(`Failed bulk send to ${item.phone}:`, err);
+        setBulkFailCount(prev => prev + 1);
+        const studentNames = item.students.map(s => s.name).join(", ");
+        setBulkErrors(prev => [...prev, `${studentNames} (${item.phone}): ${err.message}`]);
+      }
+
+      // Add a small delay between contacts
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+
+    setBulkSending(false);
+    setBulkCompleted(true);
+    setBulkCurrentIndex(queue.length);
   };
 
   return (
@@ -169,6 +256,25 @@ export function QRCodesPage() {
           >
             🖨️ Print Codes
           </button>
+          <button 
+            className="btn no-print" 
+            onClick={handleSendBulk}
+            disabled={visibleRows.length === 0}
+            style={{ 
+              padding: '14px 24px', 
+              fontSize: '1.1em', 
+              background: 'linear-gradient(135deg, #25D366, #128C7E)', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '10px', 
+              cursor: 'pointer', 
+              whiteSpace: 'nowrap',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(37,211,102,0.15)'
+            }}
+          >
+            📢 Send Bulk QR Codes
+          </button>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -223,6 +329,113 @@ export function QRCodesPage() {
           })}
         </div>
       </div>
+
+      {showBulkModal && (
+        <div className="modal-overlay" style={{ zIndex: 4000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <div className="card" style={{ maxWidth: '500px', width: '95%', padding: '0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: 'none', background: 'white' }}>
+            
+            {/* Header */}
+            <div style={{ background: '#f8fafc', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+              <h2 style={{ margin: 0, fontSize: '1.2em', color: '#1e293b', fontWeight: '800' }}>
+                📲 Bulk QR Codes Broadcast
+              </h2>
+              {!bulkSending && (
+                <button onClick={() => setShowBulkModal(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '1.8em', cursor: 'pointer', padding: 0 }}>&times;</button>
+              )}
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '30px' }}>
+              {bulkSending ? (
+                /* Progress view */
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0' }}>
+                  <h3 style={{ color: '#0f172a', margin: '0 0 8px 0' }}>Sending QR Codes...</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.9em', margin: '0 0 20px 0' }}>
+                    Processing contact {bulkCurrentIndex + 1} of {Math.max(1, bulkCurrentIndex + bulkSuccessCount + bulkFailCount)}
+                  </p>
+
+                  {/* Progress bar container */}
+                  <div style={{ width: '100%', height: '12px', background: '#f1f5f9', borderRadius: '50px', overflow: 'hidden', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
+                    <div 
+                      style={{ 
+                        width: `${Math.round((bulkCurrentIndex / Math.max(1, bulkCurrentIndex + bulkSuccessCount + bulkFailCount)) * 100)}%`, 
+                        height: '100%', 
+                        background: 'linear-gradient(90deg, #25D366, #0ea5e9)', 
+                        borderRadius: '50px',
+                        transition: 'width 0.3s ease'
+                      }}
+                    />
+                  </div>
+
+                  {/* Status Counters */}
+                  <div style={{ display: 'flex', gap: '30px', marginBottom: '24px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '2em', fontWeight: '800', color: '#16a34a' }}>{bulkSuccessCount}</div>
+                      <div style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'bold' }}>✅ Sent</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '2em', fontWeight: '800', color: '#ef4444' }}>{bulkFailCount}</div>
+                      <div style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 'bold' }}>❌ Failed</div>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn danger"
+                    onClick={() => { abortBulkRef.current = true; setBulkSending(false); }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '50px', fontWeight: 'bold', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}
+                  >
+                    🛑 Stop Sending
+                  </button>
+                </div>
+              ) : (
+                /* Completed report view */
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0' }}>
+                  <span style={{ fontSize: '3.5em', marginBottom: '15px' }}>🎉</span>
+                  <h3 style={{ color: '#16a34a', margin: '0 0 6px 0', fontSize: '1.3em' }}>Bulk Sending Complete!</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.9em', margin: '0 0 24px 0' }}>
+                    Finished transmitting QR codes to all unique parents.
+                  </p>
+
+                  <div style={{ width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                    <div style={{ textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Delivered</span>
+                      <div style={{ fontSize: '2.5em', fontWeight: '900', color: '#16a34a', marginTop: '4px' }}>{bulkSuccessCount}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Failed</span>
+                      <div style={{ fontSize: '2.5em', fontWeight: '900', color: '#ef4444', marginTop: '4px' }}>{bulkFailCount}</div>
+                    </div>
+                  </div>
+
+                  {/* Errors report */}
+                  {bulkErrors.length > 0 && (
+                    <div style={{ width: '100%', marginBottom: '24px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85em', fontWeight: '800', color: '#ef4444', marginBottom: '8px', textTransform: 'uppercase' }}>
+                        Failure Logs ({bulkErrors.length})
+                      </label>
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', maxHeight: '140px', overflowY: 'auto', padding: '12px', boxSizing: 'border-box' }}>
+                        {bulkErrors.map((err, idx) => (
+                          <div key={idx} style={{ fontSize: '0.8em', color: '#991b1b', margin: '4px 0', borderBottom: '1px solid #fee2e2', paddingBottom: '4px', textAlign: 'left' }}>
+                            {err}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    className="btn primary"
+                    onClick={() => setShowBulkModal(false)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '50px', background: 'linear-gradient(135deg, #0d2866, #0072ff)', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Close Report
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

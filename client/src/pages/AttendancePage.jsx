@@ -75,6 +75,7 @@ export function AttendancePage() {
   const [inquiryResults, setInquiryResults] = useState(null);
   const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastModalType, setBroadcastModalType] = useState("custom");
 
   const handleGlobalInquiry = async (phone) => {
     const p = phone?.replace(/\D/g, "");
@@ -159,17 +160,17 @@ export function AttendancePage() {
 
     // 3. Prepare message
     if (!skipWhatsApp) {
-      let baseMsg = message || "Thank you for attending the session!";
-      if (!baseMsg.includes("Jai Srimannarayana")) {
-        baseMsg = "Jai Srimannarayana!\n" + baseMsg;
+      let baseMsg = message || "జై శ్రీమన్నారాయణ! ఈ రోజు సెషన్‌కు హాజరైనందుకు ధన్యవాదాలు.";
+      if (!baseMsg.includes("జై శ్రీమన్నారాయణ")) {
+        baseMsg = "జై శ్రీమన్నారాయణ!\n" + baseMsg;
       }
 
       // Generate and append unique QR Code URL (QuickChart for force .png previews on WhatsApp)
       const encodedData = encodeURIComponent(slNo);
       const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
-      baseMsg += `\n\n📷 Your Attendance QR Code / మీ అటెండెన్స్ QR కోడ్:\n`;
-      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
-      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n\n`;
+      baseMsg += `\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n`;
+      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n`;
+      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n\n`;
       baseMsg += `${qrUrl}`;
 
       const text = encodeURIComponent(baseMsg);
@@ -239,17 +240,17 @@ export function AttendancePage() {
     setModifyingStudent(null);
 
     if (!skipWhatsApp) {
-      let baseMsg = message || "Thank you for attending the session!";
-      if (!baseMsg.includes("Jai Srimannarayana")) {
-        baseMsg = "Jai Srimannarayana!\n" + baseMsg;
+      let baseMsg = message || "జై శ్రీమన్నారాయణ! ఈ రోజు సెషన్‌కు హాజరైనందుకు ధన్యవాదాలు.";
+      if (!baseMsg.includes("జై శ్రీమన్నారాయణ")) {
+        baseMsg = "జై శ్రీమన్నారాయణ!\n" + baseMsg;
       }
 
       // Generate and append unique QR Code URL (QuickChart for force .png previews on WhatsApp)
       const encodedData = encodeURIComponent(modifyingStudent.slNo);
       const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
-      baseMsg += `\n\n📷 Your Attendance QR Code / మీ అటెండెన్స్ QR కోడ్:\n`;
-      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n`;
-      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n\n`;
+      baseMsg += `\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n`;
+      baseMsg += `దయచేసి ఈ QR కోడ్‌ను సేవ్ లేదా స్క్రీన్‌షాట్ తీసుకోండి. హాజరు త్వరగా నమోదు కావడానికి మీరు వచ్చినప్పుడు దీనిని చూపించండి!\n`;
+      baseMsg += `Please save or screenshot this QR code. Show it when you arrive for faster attendance!\n\n`;
       baseMsg += `${qrUrl}`;
 
       const text = encodeURIComponent(baseMsg);
@@ -412,7 +413,7 @@ export function AttendancePage() {
                     }} 
                     onClick={() => window.open('/qrcodes', '_blank')}
                   >
-                    🖨️ QR Codes
+                    🖨️ Print QR Sheets
                   </button>
                   <button 
                     style={{
@@ -425,9 +426,48 @@ export function AttendancePage() {
                       borderRadius: '50px',
                       cursor: 'pointer'
                     }} 
-                    onClick={() => setShowBroadcastModal(true)}
+                    onClick={() => {
+                      setBroadcastModalType("qrcodes");
+                      setShowBroadcastModal(true);
+                    }}
                   >
-                    📢 Broadcast Message
+                    💬 Broadcast QR Codes
+                  </button>
+                  <button 
+                    style={{
+                      background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      boxShadow: '0 2px 6px rgba(249, 115, 22, 0.2)',
+                      borderRadius: '50px',
+                      cursor: 'pointer'
+                    }} 
+                    onClick={() => {
+                      setBroadcastModalType("absent");
+                      setShowBroadcastModal(true);
+                    }}
+                  >
+                    🚫 Send Absent Alerts
+                  </button>
+                  <button 
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      boxShadow: '0 2px 6px rgba(59, 130, 246, 0.2)',
+                      borderRadius: '50px',
+                      cursor: 'pointer'
+                    }} 
+                    onClick={() => {
+                      setBroadcastModalType("custom");
+                      setShowBroadcastModal(true);
+                    }}
+                  >
+                    📢 Custom Broadcast
                   </button>
                 </>
               );
@@ -583,6 +623,7 @@ export function AttendancePage() {
         isOpen={showBroadcastModal}
         onClose={() => setShowBroadcastModal(false)}
         rows={rows}
+        initialType={broadcastModalType}
       />
       {showInquiryModal && (
         <div className="modal-overlay" style={{ zIndex: 2000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

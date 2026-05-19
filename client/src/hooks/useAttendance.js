@@ -12,7 +12,7 @@ export function useAttendance(initialDate, viewDistrict, viewPlace) {
   const [openingStock, setOpeningStock] = useState(0);
   const [previousRemainingStock, setPreviousRemainingStock] = useState(0);
   const [prevStockStats, setPrevStockStats] = useState({ opening: 0, sold: 0 });
-  const [message, setMessage] = useState("Jai Srimannarayana! Thank you for attending the session today.");
+  const [message, setMessage] = useState("జై శ్రీమన్నారాయణ! ఈ రోజు సెషన్‌కు హాజరైనందుకు ధన్యవాదాలు.");
   const [whatsappLink, setWhatsappLink] = useState("");
 
   const load = useCallback(async (d, vDist, vPlace) => {

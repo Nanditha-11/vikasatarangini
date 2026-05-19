@@ -187,10 +187,7 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ phone: num, text: inviteMsg })
           });
-          const sendManual = window.confirm("✅ Automated Welcome WhatsApp message triggered!\n\nNOTE: WhatsApp Web sometimes blocks automated messages to new numbers unless they chat first.\n\nWould you like to also open a manual WhatsApp link to guarantee delivery?");
-          if (sendManual) {
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(inviteMsg)}`, "_blank");
-          }
+          alert("✅ Welcome WhatsApp message sent!");
         } catch (waErr) {
           console.warn("Automated WhatsApp send failed, falling back to manual: ", waErr);
           window.open(`https://wa.me/${num}?text=${encodeURIComponent(inviteMsg)}`, "_blank");

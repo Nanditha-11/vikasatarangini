@@ -505,26 +505,8 @@ export function LoginPage() {
               <p style={{ margin: 0, fontSize: '1.1em', textAlign: 'center' }}>
                 Need an account? <Link to="/register" style={{ color: '#0d2866', fontWeight: 'bold' }}>Register Here</Link>
               </p>
-              <div style={{ marginTop: 15, width: '100%', textAlign: 'center' }}>
-                <span style={{ color: '#64748b', fontSize: '0.9em' }}>— OR —</span>
-              </div>
-              <button 
-                type="button" 
-                className="btn" 
-                onClick={() => nav("/student-history")}
-                style={{ 
-                  marginTop: 15, 
-                  background: 'none', 
-                  border: '2px solid #0d2866', 
-                  color: '#0d2866', 
-                  width: '100%', 
-                  padding: '12px', 
-                  fontWeight: 'bold',
-                  borderRadius: '12px'
-                }}
-              >
-                View Your Tablet History
-              </button>
+
+
 
             </div>
           </form>

@@ -27,8 +27,8 @@ locationConfigRouter.get("/", requireAuth, async (req, res) => {
       district: admin.district,
       place: admin.place,
       whatsappLink: admin.whatsappLink || "",
-      welcomeMessage: admin.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today.",
-      inviteTemplate: admin.inviteTemplate || `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, {{name}}. Please join our official WhatsApp group by clicking the link below:\n\n{{link}}`
+      welcomeMessage: admin.welcomeMessage || "జై శ్రీమన్నారాయణ! ఈ రోజు సెషన్‌కు హాజరైనందుకు ధన్యవాదాలు.",
+      inviteTemplate: admin.inviteTemplate || `జై శ్రీమన్నారాయణ!\n\nవికాస తరంగిణికి స్వాగతం, {{name}}. దయచేసి ఈ క్రింది లింక్‌ను క్లిక్ చేయడం ద్వారా మా అధికారిక వాట్సాప్ గ్రూప్‌లో చేరండి:\n\n{{link}}`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -6,6 +6,7 @@ const { requireAuth } = require("../lib/auth");
 const { tenantMiddleware } = require("../lib/tenantMiddleware");
 const { buildAttendanceWorkbook } = require("../lib/excel");
 const Admin = require("../models/Admin");
+const { sendWhatsAppMessage } = require("../lib/whatsappService");
 
 const attendanceRouter = express.Router();
 
@@ -83,7 +84,7 @@ attendanceRouter.get("/:date", async (req, res) => {
     place: { $regex: new RegExp(`^${place}$`, "i") },
     role: "admin"
   }).lean();
-  const defaultMessage = admin?.welcomeMessage || "Jai Srimannarayana! Thank you for attending the session today!";
+  const defaultMessage = admin?.welcomeMessage || "జై శ్రీమన్నారాయణ! ఈ రోజు సెషన్‌కు హాజరైనందుకు ధన్యవాదాలు.";
 
   res.json({
     date: normalizedDate,
@@ -174,6 +175,42 @@ attendanceRouter.post("/:date/save", async (req, res) => {
   }
 
   res.json({ ok: true });
+});
+
+// POST /api/attendance/:date/notify-absent
+// Sends a WhatsApp message to all absent students for the given date.
+attendanceRouter.post('/:date/notify-absent', async (req, res) => {
+  const { Student, Attendance } = req.tenantModels;
+  const { district, place, username } = req.user;
+  const date = normalizeDateParam(req.params.date);
+  if (!date) return res.status(400).json({ error: 'Invalid date' });
+
+  // Retrieve admin for default messages
+  const admin = await Admin.findOne({
+    district: { $regex: new RegExp(`^${district}$`, "i") },
+    place: { $regex: new RegExp(`^${place}$`, "i") },
+    role: "admin"
+  }).lean();
+  const defaultAbsentMessage = admin?.absentMessage || "జై శ్రీమన్నారాయణ! ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.";
+  const message = req.body.message || defaultAbsentMessage;
+
+  // Build absent list
+  const allStudents = await Student.find({}).lean();
+  const attendanceDocs = await Attendance.find({ date, type: 'student' }).lean();
+  const presentSet = new Set(attendanceDocs.map(a => String(a.slNo)));
+  const absentStudents = allStudents.filter(s => !presentSet.has(String(s.slNo)) && s.phone);
+
+  try {
+    const tenantId = req.user.username;
+    const results = await Promise.all(absentStudents.map(s =>
+      sendWhatsAppMessage(tenantId, s.phone, message)
+        .then(r => ({ slNo: s.slNo, phone: s.phone, result: r }))
+        .catch(err => ({ slNo: s.slNo, phone: s.phone, error: err.message }))
+    ));
+    res.json({ sent: results.length, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 attendanceRouter.get("/list/history", async (req, res) => {

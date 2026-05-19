@@ -1,22 +1,20 @@
 import React, { useState, useMemo, useRef } from "react";
 import { apiFetch } from "../lib/api";
 
-export function BroadcastModal({ isOpen, onClose, rows = [] }) {
+export function BroadcastModal({ isOpen, onClose, rows = [], initialType = "custom" }) {
   if (!isOpen) return null;
 
-  // Filter unique students with valid phone numbers
-  const studentsToSend = useMemo(() => {
-    const seen = new Set();
-    return rows.filter(r => {
-      const clean = (r.phone || "").replace(/\D/g, '');
-      if (clean.length < 10) return false;
-      if (seen.has(clean)) return false;
-      seen.add(clean);
-      return true;
-    });
-  }, [rows]);
-
-  const [message, setMessage] = useState("");
+  const [broadcastType, setBroadcastType] = useState(initialType); // custom | qrcodes | absent
+  const [targetGroup, setTargetGroup] = useState(() => {
+    if (initialType === "qrcodes") return "present";
+    if (initialType === "absent") return "absent";
+    return "all";
+  });
+  const [message, setMessage] = useState(() => {
+    if (initialType === "qrcodes") return "త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్‌ను సేవ్ చేసుకోండి లేదా స్క్రీన్‌షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.";
+    if (initialType === "absent") return "ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.";
+    return "";
+  });
   const [personalized, setPersonalized] = useState(true);
   const [sending, setSending] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -24,8 +22,78 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
   const [failCount, setFailCount] = useState(0);
   const [errors, setErrors] = useState([]);
   const [completed, setCompleted] = useState(false);
-  
+  const [transliterating, setTransliterating] = useState(false);
+
   const abortRef = useRef(false);
+
+  const handleTransliterate = async () => {
+    if (!message.trim()) return;
+    setTransliterating(true);
+    try {
+      const res = await fetch(`https://inputtools.google.com/request?text=${encodeURIComponent(message)}&itc=te-t-i0-und&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`);
+      const data = await res.json();
+      if (data && data[0] === "SUCCESS" && data[1] && data[1][0] && data[1][0][1] && data[1][0][1][0]) {
+        setMessage(data[1][0][1][0]);
+      }
+    } catch (err) {
+      console.error("Transliteration failed:", err);
+      alert("Transliteration failed. Please check your internet connection.");
+    } finally {
+      setTransliterating(false);
+    }
+  };
+
+  // Filter unique students with valid phone numbers based on target group
+  const studentsToSend = useMemo(() => {
+    const seen = new Set();
+    return rows.filter(r => {
+      // Filter by presence status
+      if (targetGroup === "present" && !r.present) return false;
+      if (targetGroup === "absent" && r.present) return false;
+
+      const clean = (r.phone || "").replace(/\D/g, '');
+      if (clean.length < 10) return false;
+      if (seen.has(clean)) return false;
+      seen.add(clean);
+      return true;
+    });
+  }, [rows, targetGroup]);
+
+  // Adjust inputs automatically based on broadcast type
+  const handleTypeChange = (type) => {
+    setBroadcastType(type);
+    if (type === "custom") {
+      setTargetGroup("all");
+      setMessage("");
+    } else if (type === "qrcodes") {
+      setTargetGroup("present");
+      setMessage("త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్‌ను సేవ్ చేసుకోండి లేదా స్క్రీన్‌షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.");
+    } else if (type === "absent") {
+      setTargetGroup("absent");
+      setMessage("ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.");
+    }
+  };
+
+  // Build the message preview based on the first candidate student
+  const firstStudent = studentsToSend[0] || { name: "Student Name", slNo: "123" };
+  const getFinalMessage = (student) => {
+    if (broadcastType === "custom") {
+      return personalized
+        ? `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`
+        : `జై శ్రీమన్నారాయణ!\n\n${message}`;
+    } else if (broadcastType === "qrcodes") {
+      const encodedData = encodeURIComponent(student.slNo);
+      const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
+      return `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n\n${qrUrl}`;
+    } else if (broadcastType === "absent") {
+      return `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`;
+    }
+    return message;
+  };
+
+  const previewMessage = useMemo(() => {
+    return getFinalMessage(firstStudent);
+  }, [firstStudent, broadcastType, message, personalized]);
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -53,9 +121,7 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
       const cleanNum = student.phone.replace(/\D/g, '');
       const fullPhone = cleanNum.length === 10 ? '91' + cleanNum : cleanNum;
 
-      const finalMsg = personalized
-        ? `Jai Srimannarayana, ${student.name}!\n\n${message}`
-        : `Jai Srimannarayana!\n\n${message}`;
+      const finalMsg = getFinalMessage(student);
 
       try {
         await apiFetch("/api/whatsapp/send", {
@@ -88,14 +154,19 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
     ? Math.round((currentIndex / studentsToSend.length) * 100) 
     : 0;
 
+  // Recipient stats for labels
+  const allCount = rows.filter(r => r.phone && r.phone.replace(/\D/g, '').length >= 10).length;
+  const presentCount = rows.filter(r => r.present && r.phone && r.phone.replace(/\D/g, '').length >= 10).length;
+  const absentCount = rows.filter(r => !r.present && r.phone && r.phone.replace(/\D/g, '').length >= 10).length;
+
   return (
     <div className="modal-overlay" style={{ zIndex: 4000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="card" style={{ maxWidth: '500px', width: '95%', padding: '0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: 'none', background: 'white' }}>
+      <div className="card" style={{ maxWidth: '600px', width: '95%', padding: '0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: 'none', background: 'white' }}>
         
         {/* Header */}
         <div style={{ background: '#f8fafc', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
           <h2 style={{ margin: 0, fontSize: '1.2em', color: '#1e293b', fontWeight: '800' }}>
-            📢 WhatsApp Broadcast / బ్రాడ్‌కాస్ట్
+            📢 WhatsApp Broadcast Campaign
           </h2>
           {!sending && (
             <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '1.8em', cursor: 'pointer', padding: 0 }}>&times;</button>
@@ -103,34 +174,177 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
         </div>
 
         {/* Content */}
-        <div style={{ padding: '30px' }}>
+        <div style={{ padding: '25px', maxHeight: '80vh', overflowY: 'auto' }}>
           {!sending && !completed ? (
             <>
-              {/* Target info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px 16px', borderRadius: '16px', marginBottom: '20px' }}>
-                <span style={{ fontSize: '1.5em' }}>👥</span>
-                <div>
-                  <h4 style={{ color: '#16a34a', margin: 0, fontSize: '0.95em' }}>Target: {studentsToSend.length} Students</h4>
-                  <p style={{ color: '#15803d', fontSize: '0.8em', margin: '2px 0 0' }}>All unique student contacts with valid phone numbers in this branch.</p>
+              {/* Campaign Type Pills */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.85em', fontWeight: '800', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  1. Choose Message Type
+                </label>
+                <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleTypeChange("custom")}
+                    style={{
+                      flex: 1,
+                      padding: '10px 8px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.9em',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      background: broadcastType === "custom" ? 'white' : 'transparent',
+                      color: broadcastType === "custom" ? '#0f172a' : '#64748b',
+                      boxShadow: broadcastType === "custom" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    📝 Custom Msg
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTypeChange("qrcodes")}
+                    style={{
+                      flex: 1,
+                      padding: '10px 8px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.9em',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      background: broadcastType === "qrcodes" ? 'white' : 'transparent',
+                      color: broadcastType === "qrcodes" ? '#0f172a' : '#64748b',
+                      boxShadow: broadcastType === "qrcodes" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    🖨️ Send QR Codes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTypeChange("absent")}
+                    style={{
+                      flex: 1,
+                      padding: '10px 8px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.9em',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      background: broadcastType === "absent" ? 'white' : 'transparent',
+                      color: broadcastType === "absent" ? '#0f172a' : '#64748b',
+                      boxShadow: broadcastType === "absent" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    🚫 Absent Msg
+                  </button>
+                </div>
+              </div>
+
+              {/* Target Group Selector */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.85em', fontWeight: '800', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  2. Select Target Group
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTargetGroup("all")}
+                    style={{
+                      flex: 1,
+                      padding: '12px 6px',
+                      border: targetGroup === "all" ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                      borderRadius: '12px',
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      background: targetGroup === "all" ? '#eff6ff' : 'white',
+                      color: targetGroup === "all" ? '#1e40af' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    👥 All Registered ({allCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetGroup("present")}
+                    style={{
+                      flex: 1,
+                      padding: '12px 6px',
+                      border: targetGroup === "present" ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      borderRadius: '12px',
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      background: targetGroup === "present" ? '#ecfdf5' : 'white',
+                      color: targetGroup === "present" ? '#065f46' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✅ Present Today ({presentCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetGroup("absent")}
+                    style={{
+                      flex: 1,
+                      padding: '12px 6px',
+                      border: targetGroup === "absent" ? '2px solid #f97316' : '1px solid #cbd5e1',
+                      borderRadius: '12px',
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      background: targetGroup === "absent" ? '#fff7ed' : 'white',
+                      color: targetGroup === "absent" ? '#9a3412' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🚫 Absent Today ({absentCount})
+                  </button>
                 </div>
               </div>
 
               {/* Message inputs */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.9em', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
-                  Write Custom Message
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85em', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+                    3. Customize Message Body
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleTransliterate}
+                    disabled={transliterating || !message.trim()}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: message.trim() ? '#2563eb' : '#94a3b8',
+                      cursor: message.trim() ? 'pointer' : 'not-allowed',
+                      fontSize: '0.8em',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: message.trim() ? '#eff6ff' : 'transparent',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    title="Type phonetically in English (e.g. 'namaskaram') and click to convert to Telugu"
+                  >
+                    {transliterating ? '⏳ Converting...' : '🔄 Convert to Telugu (Transliterate)'}
+                  </button>
+                </div>
                 <textarea
                   className="input"
-                  rows={5}
+                  rows={4}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message here..."
+                  placeholder="Type message text here..."
                   style={{
                     width: '100%',
                     padding: '12px 16px',
                     borderRadius: '12px',
-                    fontSize: '1em',
+                    fontSize: '0.95em',
                     border: '1px solid #cbd5e1',
                     resize: 'vertical',
                     boxSizing: 'border-box'
@@ -138,18 +352,67 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
                 />
               </div>
 
-              {/* Personalization option */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-                <input
-                  type="checkbox"
-                  id="personalize"
-                  checked={personalized}
-                  onChange={(e) => setPersonalized(e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="personalize" style={{ fontSize: '0.9em', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
-                  🙋‍♂️ Personalize (Automatically prefix with "Jai Srimannarayana, [Student Name]!")
+              {/* Personalization option (for custom) */}
+              {broadcastType === "custom" && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                  <input
+                    type="checkbox"
+                    id="personalize"
+                    checked={personalized}
+                    onChange={(e) => setPersonalized(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="personalize" style={{ fontSize: '0.9em', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
+                    🙋‍♂️ Prefix automatically with "Jai Srimannarayana, [Student Name]!"
+                  </label>
+                </div>
+              )}
+
+              {/* Message Preview (WhatsApp bubble style) */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.85em', fontWeight: '800', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🔍 Message Preview (WhatsApp View)
                 </label>
+                <div style={{
+                  background: '#efeae2',
+                  backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")',
+                  padding: '20px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}>
+                  <div style={{
+                    background: '#e1ffc7',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                    maxWidth: '85%',
+                    alignSelf: 'flex-start',
+                    position: 'relative'
+                  }}>
+                    {/* Simulated Text */}
+                    <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.9em', color: '#1e293b', fontFamily: 'sans-serif', lineHeight: '1.4' }}>
+                      {previewMessage.split('https://quickchart.io/')[0]}
+                    </div>
+                    {/* Simulated QR Thumbnail */}
+                    {broadcastType === "qrcodes" && (
+                      <div style={{ marginTop: '8px', background: 'white', padding: '8px', borderRadius: '6px', border: '1px solid #ccd', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <img 
+                          src={`https://quickchart.io/qr?text=Preview&size=150`} 
+                          alt="QR Preview" 
+                          style={{ width: '120px', height: '120px' }} 
+                        />
+                        <span style={{ fontSize: '0.7em', color: '#64748b', marginTop: '4px', wordBreak: 'break-all' }}>
+                          https://quickchart.io/qr?text={firstStudent.slNo || "123"}...
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ textAlign: 'right', fontSize: '0.7em', color: '#888', marginTop: '4px' }}>
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ✓✓
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Actions */}
@@ -177,7 +440,7 @@ export function BroadcastModal({ isOpen, onClose, rows = [] }) {
                     cursor: studentsToSend.length === 0 || !message.trim() ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  🚀 Send Broadcast
+                  🚀 Send to {studentsToSend.length} Candidates
                 </button>
               </div>
             </>
