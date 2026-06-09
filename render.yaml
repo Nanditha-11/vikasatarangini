@@ -2,8 +2,9 @@ services:
   - type: web
     name: vikasatarangini
     runtime: node
-    buildCommand: npm run build
-    startCommand: npm start
+    buildCommand: |
+      npm install --prefix server
+    startCommand: npm start --prefix server
     envVars:
       - key: NODE_VERSION
         value: 20
