@@ -177,9 +177,9 @@ export function StudentAdmin({ onRefresh, busy, setBusy, setError, rows = [], vi
 
         const activeLink = (link && link.startsWith("http")) ? link : "https://chat.whatsapp.com/I4HtF79W6msI5RftyIPgpd";
         
-        let inviteMsg = `Jai Srimannarayana!\n\nWelcome to Vikasatarangini, ${res.student.name}. Please join our official WhatsApp group by clicking the link below:\n\n${activeLink}\n\n`;
+        let inviteMsg = `శ్రీమన్నారాయణ, ${res.student.name}!\n\nవికాస తరంగిణికి స్వాగతం. దయచేసి ఈ క్రింది లింక్‌ను క్లిక్ చేయడం ద్వారా మా అధికారిక వాట్సాప్ గ్రూప్‌లో చేరండి:\n\n${activeLink}\n\n`;
 
-        inviteMsg += `📷 Your Attendance QR Code:\nPlease save or screenshot this QR code. Show it when you arrive for faster attendance!\n\n${qrUrl}`;
+        inviteMsg += `త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్ను సేవ్ చేసుకోండి లేదా స్క్రీన్షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n\n${qrUrl}`;
 
         try {
           await apiFetch("/api/whatsapp/send", {

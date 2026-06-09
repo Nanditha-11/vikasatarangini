@@ -129,7 +129,7 @@ export function StudentTable({ rows, filter, setFilter, onToggle, onMarkClick, o
                          const num = (r.phone || "").replace(/\D/g, '');
                          const encodedData = encodeURIComponent(r.slNo);
                          const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
-                         const textStr = `Jai Srimannarayana!\n\nHere is your Attendance QR Code for Vikasatarangini:\n\nPlease save this image to your phone and show it for fast attendance!\n\n${qrUrl}`;
+                         const textStr = `శ్రీమన్నారాయణ, ${r.name}!\n\nత్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్ను సేవ్ చేసుకోండి లేదా స్క్రీన్షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n\n${qrUrl}`;
                          
                          const fullPhone = num.length === 10 ? '91' + num : num;
                          try {

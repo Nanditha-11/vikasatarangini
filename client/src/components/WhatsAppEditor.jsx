@@ -19,7 +19,7 @@ export function WhatsAppEditor({ message, setMessage, whatsappLink, setWhatsappL
       .catch(err => console.error("Failed to fetch WhatsApp bot phone:", err));
   }, []);
 
-  const shareText = "జై శ్రీమన్నారాయణ! నా పిల్లల హాజరు మరియు స్వర్ణామృతం అధికారిక అప్‌డేట్స్ పొందాలనుకుంటున్నాను.";
+  const shareText = "శ్రీమన్నారాయణ! నా పిల్లల హాజరు మరియు స్వర్ణామృతం అధికారిక అప్‌డేట్స్ పొందాలనుకుంటున్నాను.";
   const shareableUrl = botPhone 
     ? `https://wa.me/${botPhone}?text=${encodeURIComponent(shareText)}` 
     : "";

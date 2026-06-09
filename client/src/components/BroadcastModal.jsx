@@ -11,7 +11,7 @@ export function BroadcastModal({ isOpen, onClose, rows = [], initialType = "cust
     return "all";
   });
   const [message, setMessage] = useState(() => {
-    if (initialType === "qrcodes") return "త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్‌ను సేవ్ చేసుకోండి లేదా స్క్రీన్‌షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.";
+    if (initialType === "qrcodes") return "త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్ను సేవ్ చేసుకోండి లేదా స్క్రీన్షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.";
     if (initialType === "absent") return "ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.";
     return "";
   });
@@ -67,7 +67,7 @@ export function BroadcastModal({ isOpen, onClose, rows = [], initialType = "cust
       setMessage("");
     } else if (type === "qrcodes") {
       setTargetGroup("present");
-      setMessage("త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్‌ను సేవ్ చేసుకోండి లేదా స్క్రీన్‌షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.");
+      setMessage("త్వరగా హాజరు నమోదు కోసం, దయచేసి ఈ కింది QR కోడ్ను సేవ్ చేసుకోండి లేదా స్క్రీన్షాట్ తీసుకోండి. మీరు వచ్చినప్పుడు దీనిని చూపించండి.");
     } else if (type === "absent") {
       setTargetGroup("absent");
       setMessage("ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.");
@@ -79,14 +79,14 @@ export function BroadcastModal({ isOpen, onClose, rows = [], initialType = "cust
   const getFinalMessage = (student) => {
     if (broadcastType === "custom") {
       return personalized
-        ? `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`
-        : `జై శ్రీమన్నారాయణ!\n\n${message}`;
+        ? `శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`
+        : `శ్రీమన్నారాయణ!\n\n${message}`;
     } else if (broadcastType === "qrcodes") {
       const encodedData = encodeURIComponent(student.slNo);
       const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&ext=.png`;
-      return `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n\n${qrUrl}`;
+      return `శ్రీమన్నారాయణ, ${student.name}!\n\n${message}\n\n📷 మీ అటెండెన్స్ QR కోడ్ / Your Attendance QR Code:\n\n${qrUrl}`;
     } else if (broadcastType === "absent") {
-      return `జై శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`;
+      return `శ్రీమన్నారాయణ, ${student.name}!\n\n${message}`;
     }
     return message;
   };

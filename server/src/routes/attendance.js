@@ -191,7 +191,7 @@ attendanceRouter.post('/:date/notify-absent', async (req, res) => {
     place: { $regex: new RegExp(`^${place}$`, "i") },
     role: "admin"
   }).lean();
-  const defaultAbsentMessage = admin?.absentMessage || "జై శ్రీమన్నారాయణ! ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.";
+  const defaultAbsentMessage = admin?.absentMessage || "శ్రీమన్నారాయణ! ఈ రోజు మీరు స్వర్ణామృత ప్రాశనకు హాజరు కాలేదు. దయచేసి తదుపరి కార్యక్రమానికి హాజరుకాగలరు.";
   const message = req.body.message || defaultAbsentMessage;
 
   // Build absent list
