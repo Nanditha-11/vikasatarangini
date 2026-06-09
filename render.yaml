@@ -3,8 +3,9 @@ services:
     name: vikasatarangini
     runtime: node
     buildCommand: |
-      npm install --prefix server
-    startCommand: npm start --prefix server
+      cd server && npm install
+    startCommand: |
+      cd server && npm start
     envVars:
       - key: NODE_VERSION
         value: 20
